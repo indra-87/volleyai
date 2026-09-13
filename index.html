@@ -44,6 +44,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .score-badge{font-family:'Barlow Condensed';font-weight:800;font-size:15px;padding:3px 11px;border-radius:20px;background:var(--navy);color:#fff}
 .frame-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);flex-shrink:0}
 .chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px}
+.day-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--text-dim);white-space:nowrap}
+.day-chip.sel{border-color:var(--coral);background:var(--coral-l);color:var(--coral-d)}
 .sheet-bg{position:fixed;inset:0;background:rgba(20,33,61,.6);z-index:100;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom))}
 .field{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14.5px;font-family:'Noto Sans KR';background:#F8F9FB;outline:none}
@@ -53,8 +55,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </head>
 <body>
 
+<!-- 사용 불가 안내 화면 -->
+<div id="disabledScreen" style="display:none;position:fixed;inset:0;z-index:200;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center">
+  <i class="fa-solid fa-lock text-4xl mb-4" style="color:var(--text-dim)"></i>
+  <div class="disp text-[20px] font-extrabold mb-2">지금은 이용할 수 없어요</div>
+  <p id="disabledMessage" class="text-[13.5px] leading-relaxed max-w-[320px]" style="color:var(--text-dim)"></p>
+</div>
+
+
 <!-- 헤더 -->
-<header class="sticky top-0 z-40" style="background:linear-gradient(135deg,var(--navy),var(--navy-2));">
+<header id="appHeader" class="sticky top-0 z-40" style="display:none;background:linear-gradient(135deg,var(--navy),var(--navy-2));">
   <div class="max-w-[560px] mx-auto px-4 h-16 flex items-center justify-between">
     <div>
       <div class="disp text-white font-extrabold text-[19px] leading-tight flex items-center gap-2">
@@ -69,28 +79,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 </header>
 
-<main class="max-w-[560px] mx-auto px-4 pt-4">
+<main id="appMain" class="max-w-[560px] mx-auto px-4 pt-4" style="display:none">
 
   <!-- ===== TAB 1: 동작 분석 ===== -->
   <section id="tabAnalyze">
-
-    <!-- 설정 (접이식) -->
-    <details class="card p-3.5 mb-3.5">
-      <summary class="text-[13px] font-bold cursor-pointer flex items-center gap-2" style="color:var(--text-dim)">
-        <i class="fa-solid fa-gear"></i> 서버 설정
-      </summary>
-      <div class="mt-3 space-y-2.5">
-        <div>
-          <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">Supabase Edge Function URL</label>
-          <input id="edgeUrlInput" class="field mt-1" type="text"/>
-        </div>
-        <p class="text-[11px] leading-relaxed" style="color:var(--text-dim)">
-          <i class="fa-solid fa-lock" style="color:var(--teal)"></i>
-          NAS 계정정보는 서버(Edge Function)에만 저장되어 있어 이 화면에는 표시되지 않아요. 안전하게 프록시됩니다.
-        </p>
-        <button id="btnSaveEdge" class="btn btn-ghost w-full py-2 text-[13px] font-bold">저장</button>
-      </div>
-    </details>
 
     <!-- 동작 선택 -->
     <div class="card p-4 mb-3.5">
@@ -100,7 +92,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
     <!-- 카메라 / 녹화 -->
     <div class="card p-4 mb-3.5">
-      <div class="text-[14px] font-extrabold mb-3">2. 15초 동작 촬영</div>
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-[14px] font-extrabold">2. 동작 촬영 (최대 15초)</div>
+        <label class="flex items-center gap-1.5 text-[11.5px] font-bold" style="color:var(--text-dim)">
+          <input type="checkbox" id="countdownToggle" class="w-3.5 h-3.5"/> 3초 카운트다운
+        </label>
+      </div>
 
       <div class="relative rounded-[14px] overflow-hidden bg-black" style="aspect-ratio:3/4">
         <video id="liveVideo" autoplay playsinline muted class="w-full h-full object-cover" style="display:none"></video>
@@ -117,7 +114,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <button id="btnCamOn" class="btn btn-ghost py-3 text-[13.5px] font-bold col-span-2"><i class="fa-solid fa-camera mr-1.5"></i>카메라 켜기</button>
       </div>
       <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="recordButtons" style="display:none">
-        <button id="btnRecord" class="btn btn-primary py-3 text-[13.5px] col-span-2"><i class="fa-solid fa-circle mr-1.5"></i>촬영 시작 (3초 후 15초 녹화)</button>
+        <button id="btnRecord" class="btn btn-primary py-3 text-[13.5px] col-span-2"><i class="fa-solid fa-circle mr-1.5"></i>촬영 시작</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="recordingButtons" style="display:none">
+        <button id="btnStopRecord" class="btn py-3 text-[13.5px] font-bold col-span-2" style="background:#DC2626;color:#fff;border-radius:14px"><i class="fa-solid fa-stop mr-1.5"></i>촬영 종료</button>
       </div>
       <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="previewButtons" style="display:none">
         <button id="btnRetake" class="btn btn-ghost py-3 text-[13.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1.5"></i>다시 촬영</button>
@@ -133,7 +133,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
       <div id="loadingBox" class="flex flex-col items-center gap-2.5 py-8" style="display:none">
         <div class="spinner"></div>
-        <div class="text-[12.5px] font-semibold" style="color:var(--text-dim)">AI가 프레임 5장을 분석하고 있어요...</div>
+        <div class="text-[12.5px] font-semibold" style="color:var(--text-dim)">AI가 핵심 장면을 분석하고 있어요...</div>
       </div>
       <div id="resultBody" style="display:none">
         <div class="rounded-[12px] p-3 mb-2.5" style="background:var(--teal-l)">
@@ -152,10 +152,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
   <!-- ===== TAB 2: 성장 기록 ===== -->
   <section id="tabHistory" style="display:none">
-    <div class="flex items-center justify-between mb-3.5 mt-1">
+    <div class="flex items-center justify-between mb-3 mt-1">
       <div class="disp text-[20px] font-extrabold">나의 성장 기록</div>
       <button id="btnRefreshHistory" class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold"><i class="fa-solid fa-rotate mr-1"></i>새로고침</button>
     </div>
+    <div id="dayFilterRow" class="flex gap-2 overflow-x-auto pb-1 mb-3.5"></div>
     <div id="historyEmpty" class="card p-8 text-center" style="display:none">
       <i class="fa-solid fa-volleyball text-3xl mb-2.5" style="color:var(--line)"></i>
       <p class="text-[13px] font-semibold" style="color:var(--text-dim)">아직 기록이 없어요. [동작 분석] 탭에서 첫 촬영을 시작해보세요!</p>
@@ -166,18 +167,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </main>
 
 <!-- 하단 탭바 -->
-<nav class="fixed bottom-0 left-0 right-0 z-40 flex bg-white" style="border-top:1px solid var(--line)">
+<nav id="appNav" class="fixed bottom-0 left-0 right-0 z-40 flex bg-white" style="display:none;border-top:1px solid var(--line)">
   <div class="max-w-[560px] mx-auto w-full flex">
     <button class="tab-btn active" id="navAnalyze"><i class="fa-solid fa-video"></i>동작 분석</button>
     <button class="tab-btn" id="navHistory"><i class="fa-solid fa-chart-line"></i>성장 기록</button>
   </div>
 </nav>
 
-<!-- 로그인 시트 (이름 + 개인확인코드) -->
-<div id="loginSheetBg" class="sheet-bg" style="display:none">
-  <div class="sheet">
-    <div class="disp text-[19px] font-extrabold mb-1">연수생 확인</div>
-    <p class="text-[12.5px] mb-3.5" style="color:var(--text-dim)">강사님께 안내받은 이름과 개인확인코드를 입력해주세요.</p>
+<!-- 연수생 확인 (초기 전체화면) -->
+<div id="loginScreen" style="display:none;position:fixed;inset:0;z-index:150;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:32px">
+  <div class="w-full" style="max-width:340px">
+    <div class="text-center mb-6">
+      <i class="fa-solid fa-volleyball text-4xl mb-3" style="color:var(--coral)"></i>
+      <div class="disp text-[24px] font-extrabold">슬기로운 배구생활</div>
+      <p class="text-[13px] mt-1.5" style="color:var(--text-dim)">강사님께 안내받은 이름과 개인확인코드를 입력해주세요.</p>
+    </div>
     <input id="loginName" class="field mb-2" type="text" placeholder="이름" maxlength="20"/>
     <input id="loginCode" class="field" type="text" placeholder="개인확인코드" maxlength="20"/>
     <p id="loginError" class="text-[12px] font-bold mt-2" style="color:#DC2626;display:none"></p>
@@ -212,7 +216,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 const SB_URL = "https://pqjuvuflinnrpemqcafl.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxanV2dWZsaW5ucnBlbXFjYWZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NzAzMjQsImV4cCI6MjA5NDA0NjMyNH0.E4sJv1gM9TbWG-2o90aH8wJXZMLRY_uLQ9fgWARX1Ro";
 const SB_HEADERS = {"Content-Type":"application/json","apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY};
-const DEFAULT_EDGE_URL = SB_URL + "/functions/v1/vball-api";
+const EDGE_URL = SB_URL + "/functions/v1/vball-api";
 
 const MOTIONS = [
   {code:"toss",  label:"토스",       em:"🙌"},
@@ -222,11 +226,10 @@ const MOTIONS = [
   {code:"over",  label:"오버 리시브", em:"👐"},
 ];
 const MOTION_MAP = Object.fromEntries(MOTIONS.map(m => [m.code, m]));
-const FRAME_TIMES = [2, 5, 8, 11, 14];
-const RECORD_SECONDS = 15;
+const FRAME_COUNT = 6;
+const RECORD_SECONDS_MAX = 15;
 
 /* ===================== 상태 ===================== */
-let edgeUrl = localStorage.getItem("vball_edge_url") || DEFAULT_EDGE_URL;
 let session = null;
 try { session = JSON.parse(localStorage.getItem("vball_session") || "null"); } catch { session = null; }
 let selectedMotion = null;
@@ -236,12 +239,33 @@ let recordedChunks = [];
 let recordedBlob = null;
 let recordedMime = "video/webm";
 let lastAnalysis = null;
+let recordTimer = null;
+let recordAutoStopTimeout = null;
+let trainingStartDate = null;
+let historyRows = [];
+let selectedDayFilter = "all";
 
 /* ===================== 초기화 ===================== */
-function init() {
-  document.getElementById("edgeUrlInput").value = edgeUrl;
+async function init() {
   renderMotionGrid();
   bindEvents();
+
+  const countdownPref = localStorage.getItem("vball_countdown") === "on";
+  document.getElementById("countdownToggle").checked = countdownPref;
+
+  try {
+    const res = await fetch(EDGE_URL + "?action=app_status");
+    const data = await res.json();
+    trainingStartDate = data.training_start_date || null;
+    if (!data.active) {
+      document.getElementById("disabledMessage").textContent = data.message || "지금은 이용할 수 없는 기간이에요.";
+      document.getElementById("disabledScreen").style.display = "flex";
+      return;
+    }
+  } catch (e) {
+    // 상태 확인 자체가 실패하면(네트워크 오류 등) 일단 이용은 계속 허용
+  }
+
   if (!session) {
     openLoginSheet();
   } else {
@@ -265,13 +289,12 @@ function bindEvents() {
   });
   document.getElementById("btnLogin").addEventListener("click", doLogin);
   document.getElementById("loginCode").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
-  document.getElementById("btnSaveEdge").addEventListener("click", () => {
-    edgeUrl = document.getElementById("edgeUrlInput").value.trim() || DEFAULT_EDGE_URL;
-    localStorage.setItem("vball_edge_url", edgeUrl);
-    showToast("✅ 서버 설정이 저장됐어요");
+  document.getElementById("countdownToggle").addEventListener("change", e => {
+    localStorage.setItem("vball_countdown", e.target.checked ? "on" : "off");
   });
   document.getElementById("btnCamOn").addEventListener("click", startCamera);
   document.getElementById("btnRecord").addEventListener("click", startCountdownAndRecord);
+  document.getElementById("btnStopRecord").addEventListener("click", stopRecordingNow);
   document.getElementById("btnRetake").addEventListener("click", resetToCamera);
   document.getElementById("btnAnalyze").addEventListener("click", runAnalysis);
   document.getElementById("btnRefreshHistory").addEventListener("click", loadHistory);
@@ -290,10 +313,13 @@ function switchTab(tab) {
 
 /* ===================== 로그인 ===================== */
 function openLoginSheet() {
+  document.getElementById("appHeader").style.display = "none";
+  document.getElementById("appMain").style.display = "none";
+  document.getElementById("appNav").style.display = "none";
   document.getElementById("loginError").style.display = "none";
   document.getElementById("loginName").value = "";
   document.getElementById("loginCode").value = "";
-  document.getElementById("loginSheetBg").style.display = "flex";
+  document.getElementById("loginScreen").style.display = "flex";
 }
 async function doLogin() {
   const name = document.getElementById("loginName").value.trim();
@@ -305,7 +331,7 @@ async function doLogin() {
   const btn = document.getElementById("btnLogin");
   btn.disabled = true;
   try {
-    const res = await fetch(edgeUrl + "?action=trainee_login", {
+    const res = await fetch(EDGE_URL + "?action=trainee_login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, code })
@@ -314,7 +340,7 @@ async function doLogin() {
     if (!res.ok || data.error) throw new Error(data.error || "확인 실패");
     session = { id: data.id, name: data.name };
     localStorage.setItem("vball_session", JSON.stringify(session));
-    document.getElementById("loginSheetBg").style.display = "none";
+    document.getElementById("loginScreen").style.display = "none";
     applySession();
   } catch (e) {
     errEl.textContent = e.message;
@@ -324,6 +350,9 @@ async function doLogin() {
   }
 }
 function applySession() {
+  document.getElementById("appHeader").style.display = "block";
+  document.getElementById("appMain").style.display = "block";
+  document.getElementById("appNav").style.display = "flex";
   document.getElementById("nameLabel").textContent = session.name;
   document.getElementById("avatarInit").textContent = session.name.charAt(0);
 }
@@ -367,6 +396,7 @@ async function startCamera() {
 function resetToCamera() {
   document.getElementById("previewVideo").style.display = "none";
   document.getElementById("previewButtons").style.display = "none";
+  document.getElementById("recordingButtons").style.display = "none";
   document.getElementById("resultCard").style.display = "none";
   recordedBlob = null;
   lastAnalysis = null;
@@ -379,19 +409,23 @@ function resetToCamera() {
   }
 }
 
-/* ===================== 촬영 (3초 카운트 + 15초 녹화) ===================== */
+/* ===================== 촬영 (선택적 3초 카운트 + 최대 15초 녹화, 중간에 종료 가능) ===================== */
 async function startCountdownAndRecord() {
   if (!selectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
   if (!mediaStream) { alert("카메라를 먼저 켜주세요."); return; }
 
-  const overlay = document.getElementById("countOverlay");
+  const useCountdown = document.getElementById("countdownToggle").checked;
   document.getElementById("recordButtons").style.display = "none";
-  overlay.style.display = "flex";
-  for (const n of [3, 2, 1]) {
-    overlay.textContent = n;
-    await sleep(1000);
+
+  if (useCountdown) {
+    const overlay = document.getElementById("countOverlay");
+    overlay.style.display = "flex";
+    for (const n of [3, 2, 1]) {
+      overlay.textContent = n;
+      await sleep(1000);
+    }
+    overlay.style.display = "none";
   }
-  overlay.style.display = "none";
   startRecording();
 }
 
@@ -415,6 +449,7 @@ function startRecording() {
     mediaRecorder = new MediaRecorder(mediaStream, recordedMime ? { mimeType: recordedMime } : undefined);
   } catch (e) {
     alert("이 브라우저에서는 동영상 녹화를 지원하지 않습니다.");
+    resetToCamera();
     return;
   }
   mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
@@ -422,21 +457,29 @@ function startRecording() {
   mediaRecorder.start();
 
   document.getElementById("recBadge").style.display = "flex";
-  let remaining = RECORD_SECONDS;
+  document.getElementById("recordingButtons").style.display = "grid";
+  let remaining = RECORD_SECONDS_MAX;
   document.getElementById("recTimeText").textContent = remaining;
-  const timer = setInterval(() => {
+  recordTimer = setInterval(() => {
     remaining -= 1;
     document.getElementById("recTimeText").textContent = Math.max(remaining, 0);
-    if (remaining <= 0) clearInterval(timer);
+    if (remaining <= 0) clearInterval(recordTimer);
   }, 1000);
 
-  setTimeout(() => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-    document.getElementById("recBadge").style.display = "none";
-  }, RECORD_SECONDS * 1000);
+  recordAutoStopTimeout = setTimeout(stopRecordingNow, RECORD_SECONDS_MAX * 1000);
+}
+
+function stopRecordingNow() {
+  if (recordTimer) { clearInterval(recordTimer); recordTimer = null; }
+  if (recordAutoStopTimeout) { clearTimeout(recordAutoStopTimeout); recordAutoStopTimeout = null; }
+  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  document.getElementById("recBadge").style.display = "none";
+  document.getElementById("recordingButtons").style.display = "none";
 }
 
 function onRecordingStop() {
+  document.getElementById("recBadge").style.display = "none";
+  document.getElementById("recordingButtons").style.display = "none";
   recordedBlob = new Blob(recordedChunks, { type: recordedMime });
   const url = URL.createObjectURL(recordedBlob);
   const liveVideo = document.getElementById("liveVideo");
@@ -449,7 +492,7 @@ function onRecordingStop() {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/* ===================== 프레임 추출 ===================== */
+/* ===================== 프레임 추출 (실제 녹화 길이에 맞춰 균등 추출) ===================== */
 function extractFrames(blob) {
   return new Promise((resolve, reject) => {
     const v = document.createElement("video");
@@ -458,15 +501,16 @@ function extractFrames(blob) {
     v.src = URL.createObjectURL(blob);
 
     v.onloadedmetadata = async () => {
-      const duration = isFinite(v.duration) && v.duration > 0 ? v.duration : RECORD_SECONDS;
+      const duration = isFinite(v.duration) && v.duration > 0 ? v.duration : RECORD_SECONDS_MAX;
       const canvas = document.createElement("canvas");
       canvas.width = v.videoWidth || 640;
       canvas.height = v.videoHeight || 480;
       const ctx = canvas.getContext("2d");
       const frames = [];
       try {
-        for (const t of FRAME_TIMES) {
-          const target = Math.min(t, Math.max(duration - 0.15, 0.1));
+        for (let i = 0; i < FRAME_COUNT; i++) {
+          const frac = (i + 0.5) / FRAME_COUNT; // 구간 중앙값으로 균등 샘플링
+          const target = Math.min(frac * duration, Math.max(duration - 0.1, 0.05));
           await seekTo(v, target);
           ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
           frames.push(canvas.toDataURL("image/jpeg", 0.5));
@@ -498,7 +542,7 @@ async function runAnalysis() {
 
   try {
     const frames = await extractFrames(recordedBlob);
-    const res = await fetch(edgeUrl + "?action=analyze", {
+    const res = await fetch(EDGE_URL + "?action=analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY },
       body: JSON.stringify({ motion_type: selectedMotion, frames })
@@ -567,7 +611,7 @@ async function saveRecordInBackground(analysis, frames, blob, mimeType) {
 
   showToast("☁️ NAS로 영상 전송 중...");
   try {
-    const upRes = await fetch(edgeUrl + "?action=upload&filename=" + encodeURIComponent(filename), {
+    const upRes = await fetch(EDGE_URL + "?action=upload&filename=" + encodeURIComponent(filename), {
       method: "POST",
       headers: { "x-video-type": mimeType, "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY },
       body: blob
@@ -597,15 +641,57 @@ async function loadHistory() {
     const res = await fetch(SB_URL + "/rest/v1/vball_records" + q, { headers: SB_HEADERS });
     const rows = await res.json();
     if (!res.ok) throw new Error(rows.message || "조회 실패");
-    renderHistory(rows);
+    historyRows = rows;
+    renderDayFilter();
+    renderHistory();
   } catch (e) {
     listEl.innerHTML = `<div class="card p-6 text-center text-[13px]" style="color:var(--text-dim)">기록을 불러오지 못했어요: ${escHtml(e.message)}</div>`;
   }
 }
 
-function renderHistory(rows) {
+function dayNumberOf(record) {
+  if (!trainingStartDate) return null;
+  const start = new Date(trainingStartDate + "T00:00:00");
+  const recDate = new Date(record.created_at);
+  const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const recDay = Date.UTC(recDate.getFullYear(), recDate.getMonth(), recDate.getDate());
+  return Math.floor((recDay - startDay) / 86400000) + 1;
+}
+
+function renderDayFilter() {
+  const row = document.getElementById("dayFilterRow");
+  row.innerHTML = "";
+
+  const makeChip = (label, value) => {
+    const c = document.createElement("button");
+    c.className = "btn day-chip" + (selectedDayFilter === value ? " sel" : "");
+    c.textContent = label;
+    c.addEventListener("click", () => { selectedDayFilter = value; renderDayFilter(); renderHistory(); });
+    return c;
+  };
+
+  row.appendChild(makeChip("전체", "all"));
+
+  if (trainingStartDate) {
+    const maxDay = Math.max(5, ...historyRows.map(r => dayNumberOf(r) || 0));
+    for (let d = 1; d <= maxDay; d++) row.appendChild(makeChip(`${d}일차`, "day-" + d));
+  } else {
+    const dates = [...new Set(historyRows.map(r => r.created_at.slice(0, 10)))].sort().reverse();
+    dates.forEach(d => row.appendChild(makeChip(d.slice(5), "date-" + d)));
+  }
+}
+
+function matchesFilter(r) {
+  if (selectedDayFilter === "all") return true;
+  if (selectedDayFilter.startsWith("day-")) return dayNumberOf(r) === Number(selectedDayFilter.slice(4));
+  if (selectedDayFilter.startsWith("date-")) return r.created_at.slice(0, 10) === selectedDayFilter.slice(5);
+  return true;
+}
+
+function renderHistory() {
   const listEl = document.getElementById("historyList");
   const emptyEl = document.getElementById("historyEmpty");
+  const rows = historyRows.filter(matchesFilter);
   listEl.innerHTML = "";
   emptyEl.style.display = rows.length === 0 ? "block" : "none";
   rows.forEach(r => listEl.appendChild(buildRecordCard(r)));
@@ -624,7 +710,7 @@ function buildRecordCard(r) {
 
   let videoHtml = "";
   if (r.video_status === "done" && r.video_filename) {
-    const src = edgeUrl + "?action=stream&filename=" + encodeURIComponent(r.video_filename);
+    const src = EDGE_URL + "?action=stream&filename=" + encodeURIComponent(r.video_filename);
     videoHtml = `<video controls playsinline class="w-full rounded-[12px] mt-3" style="max-height:340px;background:#000" src="${src}"></video>`;
   } else if (r.video_status === "uploading") {
     videoHtml = `<div class="chip mt-3" style="background:var(--amber-l);color:#B45309"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>NAS로 영상 전송 중...</div>`;
@@ -690,9 +776,15 @@ function buildRecordCard(r) {
   wrap.querySelector('[data-role="delete"]').addEventListener("click", async () => {
     if (!confirm("이 기록을 삭제할까요? 되돌릴 수 없어요.")) return;
     try {
+      if (r.video_filename) {
+        fetch(EDGE_URL + "?action=delete_video&filename=" + encodeURIComponent(r.video_filename), {
+          method: "POST"
+        }).catch(() => {});
+      }
       const res = await fetch(SB_URL + "/rest/v1/vball_records?id=eq." + r.id, { method: "DELETE", headers: SB_HEADERS });
       if (!res.ok) throw new Error();
       wrap.remove();
+      historyRows = historyRows.filter(row => row.id !== r.id);
       showToast("🗑️ 삭제됐어요");
     } catch { showToast("⚠️ 삭제 실패"); }
   });
