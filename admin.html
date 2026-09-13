@@ -65,6 +65,30 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
     </details>
 
     <div class="card p-4 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-[14px] font-extrabold">앱 사용 설정</div>
+        <span id="statusBadge" class="text-[11.5px] font-bold px-2.5 py-1 rounded-full">-</span>
+      </div>
+      <label class="flex items-center gap-2 text-[13.5px] font-bold mb-3">
+        <input type="checkbox" id="cfgEnabled" class="w-4 h-4"/> 앱 사용 활성화
+      </label>
+      <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+        <div>
+          <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">연수 시작일</label>
+          <input id="cfgStartDate" class="field mt-1" type="date"/>
+        </div>
+        <div>
+          <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">사용 종료일 (이후 자동 차단)</label>
+          <input id="cfgActiveUntil" class="field mt-1" type="date"/>
+        </div>
+      </div>
+      <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">종료 시 안내 문구 (선택)</label>
+      <textarea id="cfgMessage" class="field mt-1" rows="2" placeholder="예: 연수가 종료되어 더 이상 이용하실 수 없어요."></textarea>
+      <button id="btnSaveConfig" class="btn btn-primary w-full py-3 text-[14px] mt-3">설정 저장</button>
+      <p id="cfgMsg" class="text-[12px] font-bold mt-2" style="display:none"></p>
+    </div>
+
+    <div class="card p-4 mb-4">
       <div class="text-[14px] font-extrabold mb-3">연수생 추가</div>
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2.5">
         <input id="newName" class="field" type="text" placeholder="이름" maxlength="20"/>
@@ -122,10 +146,69 @@ async function doGateLogin() {
     document.getElementById("gate").style.display = "none";
     document.getElementById("panel").style.display = "block";
     loadList();
+    loadConfig();
   } catch {
     errEl.style.display = "block";
   }
 }
+
+async function loadConfig() {
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_get_config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "설정 조회 실패");
+    applyConfig(data.config);
+  } catch (e) {
+    document.getElementById("statusBadge").textContent = "설정 조회 실패";
+  }
+}
+
+function applyConfig(cfg) {
+  document.getElementById("cfgEnabled").checked = !!cfg.enabled;
+  document.getElementById("cfgStartDate").value = cfg.training_start_date || "";
+  document.getElementById("cfgActiveUntil").value = cfg.active_until || "";
+  document.getElementById("cfgMessage").value = cfg.message || "";
+  const badge = document.getElementById("statusBadge");
+  if (cfg.active) {
+    badge.textContent = "● 현재 사용 가능";
+    badge.style.background = "var(--teal-l)"; badge.style.color = "var(--teal)";
+  } else {
+    badge.textContent = "● 현재 사용 불가";
+    badge.style.background = "#FEE2E2"; badge.style.color = "#B91C1C";
+  }
+}
+
+document.getElementById("btnSaveConfig").addEventListener("click", async () => {
+  const msgEl = document.getElementById("cfgMsg");
+  msgEl.style.display = "none";
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_update_config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: adminPassword,
+        enabled: document.getElementById("cfgEnabled").checked,
+        training_start_date: document.getElementById("cfgStartDate").value,
+        active_until: document.getElementById("cfgActiveUntil").value,
+        message: document.getElementById("cfgMessage").value,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "저장 실패");
+    applyConfig({ ...data.config, active: data.config.enabled && (!data.config.active_until || new Date().toISOString().slice(0,10) <= data.config.active_until) });
+    msgEl.textContent = "✅ 설정이 저장됐어요.";
+    msgEl.style.color = "#1FA98F";
+    msgEl.style.display = "block";
+  } catch (e) {
+    msgEl.textContent = "⚠️ " + e.message;
+    msgEl.style.color = "#DC2626";
+    msgEl.style.display = "block";
+  }
+});
 
 document.getElementById("btnRandomCode").addEventListener("click", () => {
   document.getElementById("newCode").value = String(Math.floor(1000 + Math.random() * 9000));
