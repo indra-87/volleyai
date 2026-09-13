@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>슬기로운 배구생활 - AI 동작 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --navy:#14213D; --navy-2:#1F2F52; --navy-3:#2A3E68;
+  --coral:#FF6B4A; --coral-d:#E8542E; --coral-l:#FFE9E2;
+  --teal:#1FA98F; --teal-l:#E4F7F3;
+  --amber:#F5A623; --amber-l:#FFF3DD;
+  --bg:#EEF1F6; --card:#FFFFFF; --line:#E2E7EF;
+  --text:#182236; --text-dim:#6B7688;
+}
+*{box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);margin:0;padding-bottom:84px;-webkit-tap-highlight-color:transparent}
+.disp{font-family:'Barlow Condensed','Noto Sans KR',sans-serif}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px}
+.btn{touch-action:manipulation;user-select:none}
+.btn-primary{background:var(--coral);color:#fff;font-weight:700;border-radius:14px;transition:transform .12s, background .15s}
+.btn-primary:active{transform:scale(.97);background:var(--coral-d)}
+.btn-primary:disabled{background:#C9CFDA;color:#8890A0}
+.btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--text);border-radius:14px}
+.btn-ghost:active{transform:scale(.97);background:#F5F7FA}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 calc(9px + env(safe-area-inset-bottom));color:#9AA3B2;font-size:11px;font-weight:700}
+.tab-btn.active{color:var(--coral)}
+.tab-btn i{font-size:19px}
+.motion-btn{border:2px solid var(--line);border-radius:16px;background:#fff;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:13px;transition:all .15s}
+.motion-btn.sel{border-color:var(--coral);background:var(--coral-l);color:var(--coral-d)}
+.motion-btn .em{font-size:26px}
+.spinner{width:34px;height:34px;border:4px solid var(--coral-l);border-top-color:var(--coral);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pulse-dot{width:9px;height:9px;border-radius:50%;background:#EF4444;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.count-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,33,61,.55);color:#fff;font-family:'Barlow Condensed';font-weight:800;font-size:96px;z-index:5}
+.rec-badge{position:absolute;top:10px;left:10px;background:rgba(239,68,68,.92);color:#fff;font-size:12px;font-weight:700;padding:5px 10px 5px 8px;border-radius:20px;display:flex;align-items:center;gap:6px;z-index:5}
+.toast-corner{position:fixed;right:14px;bottom:96px;background:var(--navy);color:#fff;font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(20,33,61,.35);z-index:80;display:flex;align-items:center;gap:8px;max-width:78vw;transition:opacity .25s, transform .25s;opacity:0;transform:translateY(8px);pointer-events:none}
+.toast-corner.show{opacity:1;transform:translateY(0)}
+.score-badge{font-family:'Barlow Condensed';font-weight:800;font-size:15px;padding:3px 11px;border-radius:20px;background:var(--navy);color:#fff}
+.frame-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);flex-shrink:0}
+.chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px}
+.sheet-bg{position:fixed;inset:0;background:rgba(20,33,61,.6);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom))}
+.field{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14.5px;font-family:'Noto Sans KR';background:#F8F9FB;outline:none}
+.field:focus{border-color:var(--coral);background:#fff}
+::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="sticky top-0 z-40" style="background:linear-gradient(135deg,var(--navy),var(--navy-2));">
+  <div class="max-w-[560px] mx-auto px-4 h-16 flex items-center justify-between">
+    <div>
+      <div class="disp text-white font-extrabold text-[19px] leading-tight flex items-center gap-2">
+        <i class="fa-solid fa-volleyball text-[20px]" style="color:var(--coral)"></i> 슬기로운 배구생활
+      </div>
+      <div class="text-[11px] font-semibold" style="color:#A9B4CC">AI 동작 분석 · 연수생 모드</div>
+    </div>
+    <button id="btnProfile" class="btn flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5" style="background:rgba(255,255,255,.12)">
+      <span class="w-6 h-6 rounded-full flex items-center justify-center text-white text-[12px] font-extrabold" style="background:var(--coral)" id="avatarInit">?</span>
+      <span class="text-white text-[12.5px] font-bold max-w-[76px] truncate" id="nameLabel">이름 입력</span>
+    </button>
+  </div>
+</header>
+
+<main class="max-w-[560px] mx-auto px-4 pt-4">
+
+  <!-- ===== TAB 1: 동작 분석 ===== -->
+  <section id="tabAnalyze">
+
+    <!-- 설정 (접이식) -->
+    <details class="card p-3.5 mb-3.5">
+      <summary class="text-[13px] font-bold cursor-pointer flex items-center gap-2" style="color:var(--text-dim)">
+        <i class="fa-solid fa-gear"></i> 서버 설정
+      </summary>
+      <div class="mt-3 space-y-2.5">
+        <div>
+          <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">Supabase Edge Function URL</label>
+          <input id="edgeUrlInput" class="field mt-1" type="text"/>
+        </div>
+        <p class="text-[11px] leading-relaxed" style="color:var(--text-dim)">
+          <i class="fa-solid fa-lock" style="color:var(--teal)"></i>
+          NAS 계정정보는 서버(Edge Function)에만 저장되어 있어 이 화면에는 표시되지 않아요. 안전하게 프록시됩니다.
+        </p>
+        <button id="btnSaveEdge" class="btn btn-ghost w-full py-2 text-[13px] font-bold">저장</button>
+      </div>
+    </details>
+
+    <!-- 동작 선택 -->
+    <div class="card p-4 mb-3.5">
+      <div class="text-[14px] font-extrabold mb-3">1. 촬영할 동작을 선택하세요</div>
+      <div id="motionGrid" class="grid grid-cols-3 gap-2.5"></div>
+    </div>
+
+    <!-- 카메라 / 녹화 -->
+    <div class="card p-4 mb-3.5">
+      <div class="text-[14px] font-extrabold mb-3">2. 15초 동작 촬영</div>
+
+      <div class="relative rounded-[14px] overflow-hidden bg-black" style="aspect-ratio:3/4">
+        <video id="liveVideo" autoplay playsinline muted class="w-full h-full object-cover" style="display:none"></video>
+        <video id="previewVideo" playsinline controls class="w-full h-full object-cover" style="display:none"></video>
+        <div id="camPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 gap-2">
+          <i class="fa-solid fa-video text-3xl"></i>
+          <span class="text-[12.5px] font-semibold">카메라를 켜고 촬영을 시작하세요</span>
+        </div>
+        <div id="countOverlay" class="count-overlay" style="display:none"></div>
+        <div id="recBadge" class="rec-badge" style="display:none"><span class="pulse-dot"></span><span id="recTimeText">15</span>초</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 mt-3.5" id="camButtons">
+        <button id="btnCamOn" class="btn btn-ghost py-3 text-[13.5px] font-bold col-span-2"><i class="fa-solid fa-camera mr-1.5"></i>카메라 켜기</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="recordButtons" style="display:none">
+        <button id="btnRecord" class="btn btn-primary py-3 text-[13.5px] col-span-2"><i class="fa-solid fa-circle mr-1.5"></i>촬영 시작 (3초 후 15초 녹화)</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="previewButtons" style="display:none">
+        <button id="btnRetake" class="btn btn-ghost py-3 text-[13.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1.5"></i>다시 촬영</button>
+        <button id="btnAnalyze" class="btn btn-primary py-3 text-[13.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AI 빠른 분석</button>
+      </div>
+    </div>
+
+    <!-- 분석 결과 -->
+    <div id="resultCard" class="card p-4 mb-6" style="display:none">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-[14px] font-extrabold">AI 분석 결과</div>
+        <div class="score-badge"><span id="resultScore">-</span>점</div>
+      </div>
+      <div id="loadingBox" class="flex flex-col items-center gap-2.5 py-8" style="display:none">
+        <div class="spinner"></div>
+        <div class="text-[12.5px] font-semibold" style="color:var(--text-dim)">AI가 프레임 5장을 분석하고 있어요...</div>
+      </div>
+      <div id="resultBody" style="display:none">
+        <div class="rounded-[12px] p-3 mb-2.5" style="background:var(--teal-l)">
+          <div class="text-[12.5px] font-extrabold mb-1.5" style="color:var(--teal)"><i class="fa-solid fa-circle-check mr-1"></i>잘한 점</div>
+          <ul id="goodList" class="text-[13px] leading-relaxed pl-4 list-disc" style="color:var(--text)"></ul>
+        </div>
+        <div class="rounded-[12px] p-3 mb-2.5" style="background:var(--amber-l)">
+          <div class="text-[12.5px] font-extrabold mb-1.5" style="color:#B45309"><i class="fa-solid fa-arrow-trend-up mr-1"></i>개선할 점</div>
+          <ul id="improveList" class="text-[13px] leading-relaxed pl-4 list-disc" style="color:var(--text)"></ul>
+        </div>
+        <p id="commentText" class="text-[12.5px] leading-relaxed" style="color:var(--text-dim)"></p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===== TAB 2: 성장 기록 ===== -->
+  <section id="tabHistory" style="display:none">
+    <div class="flex items-center justify-between mb-3.5 mt-1">
+      <div class="disp text-[20px] font-extrabold">나의 성장 기록</div>
+      <button id="btnRefreshHistory" class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold"><i class="fa-solid fa-rotate mr-1"></i>새로고침</button>
+    </div>
+    <div id="historyEmpty" class="card p-8 text-center" style="display:none">
+      <i class="fa-solid fa-volleyball text-3xl mb-2.5" style="color:var(--line)"></i>
+      <p class="text-[13px] font-semibold" style="color:var(--text-dim)">아직 기록이 없어요. [동작 분석] 탭에서 첫 촬영을 시작해보세요!</p>
+    </div>
+    <div id="historyList" class="space-y-3.5"></div>
+  </section>
+
+</main>
+
+<!-- 하단 탭바 -->
+<nav class="fixed bottom-0 left-0 right-0 z-40 flex bg-white" style="border-top:1px solid var(--line)">
+  <div class="max-w-[560px] mx-auto w-full flex">
+    <button class="tab-btn active" id="navAnalyze"><i class="fa-solid fa-video"></i>동작 분석</button>
+    <button class="tab-btn" id="navHistory"><i class="fa-solid fa-chart-line"></i>성장 기록</button>
+  </div>
+</nav>
+
+<!-- 로그인 시트 (이름 + 개인확인코드) -->
+<div id="loginSheetBg" class="sheet-bg" style="display:none">
+  <div class="sheet">
+    <div class="disp text-[19px] font-extrabold mb-1">연수생 확인</div>
+    <p class="text-[12.5px] mb-3.5" style="color:var(--text-dim)">강사님께 안내받은 이름과 개인확인코드를 입력해주세요.</p>
+    <input id="loginName" class="field mb-2" type="text" placeholder="이름" maxlength="20"/>
+    <input id="loginCode" class="field" type="text" placeholder="개인확인코드" maxlength="20"/>
+    <p id="loginError" class="text-[12px] font-bold mt-2" style="color:#DC2626;display:none"></p>
+    <button id="btnLogin" class="btn btn-primary w-full py-3 text-[14px] mt-3.5">확인</button>
+  </div>
+</div>
+
+<!-- 로그아웃 확인 시트 -->
+<div id="profileSheetBg" class="sheet-bg" style="display:none">
+  <div class="sheet">
+    <div class="disp text-[19px] font-extrabold mb-1" id="profileName">-</div>
+    <p class="text-[12.5px] mb-3.5" style="color:var(--text-dim)">다른 계정으로 접속하려면 로그아웃하세요.</p>
+    <div class="grid grid-cols-2 gap-2.5">
+      <button id="btnCloseProfile" class="btn btn-ghost py-3 text-[13.5px] font-bold">닫기</button>
+      <button id="btnLogout" class="btn py-3 text-[13.5px] font-bold" style="background:#FEE2E2;color:#B91C1C;border-radius:14px">로그아웃</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이미지 확대 모달 -->
+<div id="imgModalBg" class="sheet-bg" style="display:none;align-items:center">
+  <div style="max-width:520px;width:92%" >
+    <img id="imgModalImg" style="width:100%;border-radius:14px" src=""/>
+    <button id="btnCloseImgModal" class="btn btn-ghost w-full py-2.5 mt-3 text-[13px] font-bold" style="background:#fff">닫기</button>
+  </div>
+</div>
+
+<div id="toast" class="toast-corner"></div>
+
+<script>
+/* ===================== 설정값 ===================== */
+const SB_URL = "https://pqjuvuflinnrpemqcafl.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxanV2dWZsaW5ucnBlbXFjYWZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NzAzMjQsImV4cCI6MjA5NDA0NjMyNH0.E4sJv1gM9TbWG-2o90aH8wJXZMLRY_uLQ9fgWARX1Ro";
+const SB_HEADERS = {"Content-Type":"application/json","apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY};
+const DEFAULT_EDGE_URL = SB_URL + "/functions/v1/vball-api";
+
+const MOTIONS = [
+  {code:"toss",  label:"토스",       em:"🙌"},
+  {code:"block", label:"블로킹",     em:"🧱"},
+  {code:"spike", label:"스파이크",   em:"💥"},
+  {code:"under", label:"언더 리시브", em:"🤲"},
+  {code:"over",  label:"오버 리시브", em:"👐"},
+];
+const MOTION_MAP = Object.fromEntries(MOTIONS.map(m => [m.code, m]));
+const FRAME_TIMES = [2, 5, 8, 11, 14];
+const RECORD_SECONDS = 15;
+
+/* ===================== 상태 ===================== */
+let edgeUrl = localStorage.getItem("vball_edge_url") || DEFAULT_EDGE_URL;
+let session = null;
+try { session = JSON.parse(localStorage.getItem("vball_session") || "null"); } catch { session = null; }
+let selectedMotion = null;
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordedBlob = null;
+let recordedMime = "video/webm";
+let lastAnalysis = null;
+
+/* ===================== 초기화 ===================== */
+function init() {
+  document.getElementById("edgeUrlInput").value = edgeUrl;
+  renderMotionGrid();
+  bindEvents();
+  if (!session) {
+    openLoginSheet();
+  } else {
+    applySession();
+  }
+}
+
+function bindEvents() {
+  document.getElementById("navAnalyze").addEventListener("click", () => switchTab("analyze"));
+  document.getElementById("navHistory").addEventListener("click", () => switchTab("history"));
+  document.getElementById("btnProfile").addEventListener("click", () => {
+    document.getElementById("profileName").textContent = session ? session.name : "-";
+    document.getElementById("profileSheetBg").style.display = "flex";
+  });
+  document.getElementById("btnCloseProfile").addEventListener("click", () => document.getElementById("profileSheetBg").style.display = "none");
+  document.getElementById("btnLogout").addEventListener("click", () => {
+    localStorage.removeItem("vball_session");
+    session = null;
+    document.getElementById("profileSheetBg").style.display = "none";
+    openLoginSheet();
+  });
+  document.getElementById("btnLogin").addEventListener("click", doLogin);
+  document.getElementById("loginCode").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+  document.getElementById("btnSaveEdge").addEventListener("click", () => {
+    edgeUrl = document.getElementById("edgeUrlInput").value.trim() || DEFAULT_EDGE_URL;
+    localStorage.setItem("vball_edge_url", edgeUrl);
+    showToast("✅ 서버 설정이 저장됐어요");
+  });
+  document.getElementById("btnCamOn").addEventListener("click", startCamera);
+  document.getElementById("btnRecord").addEventListener("click", startCountdownAndRecord);
+  document.getElementById("btnRetake").addEventListener("click", resetToCamera);
+  document.getElementById("btnAnalyze").addEventListener("click", runAnalysis);
+  document.getElementById("btnRefreshHistory").addEventListener("click", loadHistory);
+  document.getElementById("btnCloseImgModal").addEventListener("click", () => document.getElementById("imgModalBg").style.display = "none");
+}
+
+/* ===================== 탭 전환 ===================== */
+function switchTab(tab) {
+  const isAnalyze = tab === "analyze";
+  document.getElementById("tabAnalyze").style.display = isAnalyze ? "block" : "none";
+  document.getElementById("tabHistory").style.display = isAnalyze ? "none" : "block";
+  document.getElementById("navAnalyze").classList.toggle("active", isAnalyze);
+  document.getElementById("navHistory").classList.toggle("active", !isAnalyze);
+  if (!isAnalyze) loadHistory();
+}
+
+/* ===================== 로그인 ===================== */
+function openLoginSheet() {
+  document.getElementById("loginError").style.display = "none";
+  document.getElementById("loginName").value = "";
+  document.getElementById("loginCode").value = "";
+  document.getElementById("loginSheetBg").style.display = "flex";
+}
+async function doLogin() {
+  const name = document.getElementById("loginName").value.trim();
+  const code = document.getElementById("loginCode").value.trim();
+  const errEl = document.getElementById("loginError");
+  errEl.style.display = "none";
+  if (!name || !code) { errEl.textContent = "이름과 개인확인코드를 모두 입력해주세요."; errEl.style.display = "block"; return; }
+
+  const btn = document.getElementById("btnLogin");
+  btn.disabled = true;
+  try {
+    const res = await fetch(edgeUrl + "?action=trainee_login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, code })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "확인 실패");
+    session = { id: data.id, name: data.name };
+    localStorage.setItem("vball_session", JSON.stringify(session));
+    document.getElementById("loginSheetBg").style.display = "none";
+    applySession();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+  }
+}
+function applySession() {
+  document.getElementById("nameLabel").textContent = session.name;
+  document.getElementById("avatarInit").textContent = session.name.charAt(0);
+}
+
+/* ===================== 동작 선택 ===================== */
+function renderMotionGrid() {
+  const grid = document.getElementById("motionGrid");
+  grid.innerHTML = "";
+  MOTIONS.forEach(m => {
+    const btn = document.createElement("button");
+    btn.className = "btn motion-btn";
+    btn.innerHTML = `<span class="em">${m.em}</span><span>${m.label}</span>`;
+    btn.addEventListener("click", () => {
+      selectedMotion = m.code;
+      Array.from(grid.children).forEach(c => c.classList.remove("sel"));
+      btn.classList.add("sel");
+    });
+    grid.appendChild(btn);
+  });
+}
+
+/* ===================== 카메라 ===================== */
+async function startCamera() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: true
+    });
+  } catch (e) {
+    alert("카메라/마이크 권한이 필요합니다. 브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도해주세요.");
+    return;
+  }
+  const liveVideo = document.getElementById("liveVideo");
+  liveVideo.srcObject = mediaStream;
+  liveVideo.style.display = "block";
+  document.getElementById("camPlaceholder").style.display = "none";
+  document.getElementById("camButtons").style.display = "none";
+  document.getElementById("recordButtons").style.display = "grid";
+}
+
+function resetToCamera() {
+  document.getElementById("previewVideo").style.display = "none";
+  document.getElementById("previewButtons").style.display = "none";
+  document.getElementById("resultCard").style.display = "none";
+  recordedBlob = null;
+  lastAnalysis = null;
+  if (mediaStream) {
+    document.getElementById("liveVideo").style.display = "block";
+    document.getElementById("recordButtons").style.display = "grid";
+  } else {
+    document.getElementById("camPlaceholder").style.display = "flex";
+    document.getElementById("camButtons").style.display = "grid";
+  }
+}
+
+/* ===================== 촬영 (3초 카운트 + 15초 녹화) ===================== */
+async function startCountdownAndRecord() {
+  if (!selectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
+  if (!mediaStream) { alert("카메라를 먼저 켜주세요."); return; }
+
+  const overlay = document.getElementById("countOverlay");
+  document.getElementById("recordButtons").style.display = "none";
+  overlay.style.display = "flex";
+  for (const n of [3, 2, 1]) {
+    overlay.textContent = n;
+    await sleep(1000);
+  }
+  overlay.style.display = "none";
+  startRecording();
+}
+
+function pickMimeType() {
+  const candidates = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+    "video/mp4"
+  ];
+  for (const c of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+  }
+  return "";
+}
+
+function startRecording() {
+  recordedChunks = [];
+  recordedMime = pickMimeType() || "video/webm";
+  try {
+    mediaRecorder = new MediaRecorder(mediaStream, recordedMime ? { mimeType: recordedMime } : undefined);
+  } catch (e) {
+    alert("이 브라우저에서는 동영상 녹화를 지원하지 않습니다.");
+    return;
+  }
+  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = onRecordingStop;
+  mediaRecorder.start();
+
+  document.getElementById("recBadge").style.display = "flex";
+  let remaining = RECORD_SECONDS;
+  document.getElementById("recTimeText").textContent = remaining;
+  const timer = setInterval(() => {
+    remaining -= 1;
+    document.getElementById("recTimeText").textContent = Math.max(remaining, 0);
+    if (remaining <= 0) clearInterval(timer);
+  }, 1000);
+
+  setTimeout(() => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+    document.getElementById("recBadge").style.display = "none";
+  }, RECORD_SECONDS * 1000);
+}
+
+function onRecordingStop() {
+  recordedBlob = new Blob(recordedChunks, { type: recordedMime });
+  const url = URL.createObjectURL(recordedBlob);
+  const liveVideo = document.getElementById("liveVideo");
+  const previewVideo = document.getElementById("previewVideo");
+  liveVideo.style.display = "none";
+  previewVideo.src = url;
+  previewVideo.style.display = "block";
+  document.getElementById("previewButtons").style.display = "grid";
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ===================== 프레임 추출 ===================== */
+function extractFrames(blob) {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement("video");
+    v.muted = true;
+    v.playsInline = true;
+    v.src = URL.createObjectURL(blob);
+
+    v.onloadedmetadata = async () => {
+      const duration = isFinite(v.duration) && v.duration > 0 ? v.duration : RECORD_SECONDS;
+      const canvas = document.createElement("canvas");
+      canvas.width = v.videoWidth || 640;
+      canvas.height = v.videoHeight || 480;
+      const ctx = canvas.getContext("2d");
+      const frames = [];
+      try {
+        for (const t of FRAME_TIMES) {
+          const target = Math.min(t, Math.max(duration - 0.15, 0.1));
+          await seekTo(v, target);
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          frames.push(canvas.toDataURL("image/jpeg", 0.5));
+        }
+        resolve(frames);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    v.onerror = () => reject(new Error("영상 로드 실패"));
+  });
+}
+function seekTo(videoEl, time) {
+  return new Promise(resolve => {
+    function onSeeked() { videoEl.removeEventListener("seeked", onSeeked); resolve(); }
+    videoEl.addEventListener("seeked", onSeeked);
+    videoEl.currentTime = time;
+  });
+}
+
+/* ===================== AI 분석 (1단계: 최우선) ===================== */
+async function runAnalysis() {
+  if (!recordedBlob) return;
+  if (!session) { openLoginSheet(); return; }
+  document.getElementById("resultCard").style.display = "block";
+  document.getElementById("loadingBox").style.display = "flex";
+  document.getElementById("resultBody").style.display = "none";
+  document.getElementById("btnAnalyze").disabled = true;
+
+  try {
+    const frames = await extractFrames(recordedBlob);
+    const res = await fetch(edgeUrl + "?action=analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY },
+      body: JSON.stringify({ motion_type: selectedMotion, frames })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "분석 서버 오류");
+
+    lastAnalysis = { ...data, frames };
+    renderResult(data);
+
+    // ===== 2단계: 백그라운드 비동기 저장 (DB + NAS) =====
+    saveRecordInBackground(data, frames, recordedBlob, recordedMime);
+
+  } catch (e) {
+    document.getElementById("resultCard").style.display = "none";
+    alert("AI 분석 중 오류가 발생했습니다: " + e.message);
+  } finally {
+    document.getElementById("loadingBox").style.display = "none";
+    document.getElementById("btnAnalyze").disabled = false;
+  }
+}
+
+function renderResult(data) {
+  document.getElementById("resultScore").textContent = data.score ?? "-";
+  const goodEl = document.getElementById("goodList");
+  const impEl = document.getElementById("improveList");
+  goodEl.innerHTML = (data.good_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
+  impEl.innerHTML = (data.improve_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
+  document.getElementById("commentText").textContent = data.comment || "";
+  document.getElementById("resultBody").style.display = "block";
+}
+
+/* ===================== 백그라운드 저장 (DB insert + NAS 업로드) ===================== */
+async function saveRecordInBackground(analysis, frames, blob, mimeType) {
+  const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+  const filename = `${selectedMotion}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+  showToast("☁️ 기록 저장 중...");
+
+  let recordId = null;
+  try {
+    const insertRes = await fetch(SB_URL + "/rest/v1/vball_records", {
+      method: "POST",
+      headers: { ...SB_HEADERS, "Prefer": "return=representation" },
+      body: JSON.stringify({
+        trainee_name: session.name,
+        trainee_id: session.id,
+        motion_type: selectedMotion,
+        score: analysis.score ?? null,
+        good_points: analysis.good_points || [],
+        improve_points: analysis.improve_points || [],
+        ai_comment: analysis.comment || "",
+        ai_model: analysis.ai_model || "",
+        frames: frames,
+        video_status: "uploading",
+        video_filename: filename
+      })
+    });
+    const rows = await insertRes.json();
+    if (!insertRes.ok) throw new Error(rows.message || "DB 저장 실패");
+    recordId = rows[0].id;
+  } catch (e) {
+    showToast("⚠️ 기록 저장 실패: " + e.message);
+    return;
+  }
+
+  showToast("☁️ NAS로 영상 전송 중...");
+  try {
+    const upRes = await fetch(edgeUrl + "?action=upload&filename=" + encodeURIComponent(filename), {
+      method: "POST",
+      headers: { "x-video-type": mimeType, "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY },
+      body: blob
+    });
+    const upData = await upRes.json();
+    if (!upRes.ok || upData.error) throw new Error(upData.error || "NAS 업로드 실패");
+
+    await fetch(SB_URL + "/rest/v1/vball_records?id=eq." + recordId, {
+      method: "PATCH", headers: SB_HEADERS, body: JSON.stringify({ video_status: "done" })
+    });
+    showToast("✅ 영상 저장 완료!");
+  } catch (e) {
+    await fetch(SB_URL + "/rest/v1/vball_records?id=eq." + recordId, {
+      method: "PATCH", headers: SB_HEADERS, body: JSON.stringify({ video_status: "failed" })
+    }).catch(() => {});
+    showToast("⚠️ NAS 저장 실패 (기록은 남아있어요)");
+  }
+}
+
+/* ===================== 성장 기록 탭 ===================== */
+async function loadHistory() {
+  if (!session) return;
+  const listEl = document.getElementById("historyList");
+  listEl.innerHTML = `<div class="flex justify-center py-8"><div class="spinner"></div></div>`;
+  try {
+    const q = `?trainee_id=eq.${session.id}&order=created_at.desc`;
+    const res = await fetch(SB_URL + "/rest/v1/vball_records" + q, { headers: SB_HEADERS });
+    const rows = await res.json();
+    if (!res.ok) throw new Error(rows.message || "조회 실패");
+    renderHistory(rows);
+  } catch (e) {
+    listEl.innerHTML = `<div class="card p-6 text-center text-[13px]" style="color:var(--text-dim)">기록을 불러오지 못했어요: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function renderHistory(rows) {
+  const listEl = document.getElementById("historyList");
+  const emptyEl = document.getElementById("historyEmpty");
+  listEl.innerHTML = "";
+  emptyEl.style.display = rows.length === 0 ? "block" : "none";
+  rows.forEach(r => listEl.appendChild(buildRecordCard(r)));
+}
+
+function buildRecordCard(r) {
+  const m = MOTION_MAP[r.motion_type] || { label: r.motion_type, em: "🏐" };
+  const dateStr = new Date(r.created_at).toLocaleString("ko-KR", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+
+  const wrap = document.createElement("div");
+  wrap.className = "card p-4";
+
+  const frameHtml = (r.frames || []).map(f => `<img class="frame-thumb" src="${f}" data-full="${f}"/>`).join("");
+  const goodHtml = (r.good_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
+  const impHtml = (r.improve_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
+
+  let videoHtml = "";
+  if (r.video_status === "done" && r.video_filename) {
+    const src = edgeUrl + "?action=stream&filename=" + encodeURIComponent(r.video_filename);
+    videoHtml = `<video controls playsinline class="w-full rounded-[12px] mt-3" style="max-height:340px;background:#000" src="${src}"></video>`;
+  } else if (r.video_status === "uploading") {
+    videoHtml = `<div class="chip mt-3" style="background:var(--amber-l);color:#B45309"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>NAS로 영상 전송 중...</div>`;
+  } else if (r.video_status === "failed") {
+    videoHtml = `<div class="chip mt-3" style="background:#FEE2E2;color:#B91C1C"><i class="fa-solid fa-triangle-exclamation mr-1"></i>영상 저장 실패</div>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="flex items-center justify-between mb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="chip" style="background:var(--coral-l);color:var(--coral-d)">${m.em} ${m.label}</span>
+        <span class="text-[11.5px]" style="color:var(--text-dim)">${dateStr}</span>
+      </div>
+      <div class="score-badge">${r.score ?? "-"}점</div>
+    </div>
+
+    <div class="flex gap-2 overflow-x-auto pb-1 mb-2.5" data-role="frames">${frameHtml}</div>
+
+    <div class="rounded-[12px] p-2.5 mb-2" style="background:var(--teal-l)">
+      <div class="text-[11.5px] font-extrabold mb-1" style="color:var(--teal)">잘한 점</div>
+      <ul class="text-[12.5px] pl-4 list-disc leading-relaxed">${goodHtml}</ul>
+    </div>
+    <div class="rounded-[12px] p-2.5 mb-1" style="background:var(--amber-l)">
+      <div class="text-[11.5px] font-extrabold mb-1" style="color:#B45309">개선할 점</div>
+      <ul class="text-[12.5px] pl-4 list-disc leading-relaxed">${impHtml}</ul>
+    </div>
+
+    ${videoHtml}
+
+    <div class="mt-3">
+      <label class="text-[11.5px] font-bold" style="color:var(--text-dim)"><i class="fa-solid fa-chalkboard-user mr-1"></i>강사 피드백</label>
+      <textarea class="field mt-1 text-[13px]" rows="2" data-role="instructor" placeholder="강사님의 피드백을 입력하세요">${escHtml(r.instructor_feedback || "")}</textarea>
+    </div>
+    <div class="mt-2">
+      <label class="text-[11.5px] font-bold" style="color:var(--text-dim)"><i class="fa-solid fa-pen mr-1"></i>내 생각</label>
+      <textarea class="field mt-1 text-[13px]" rows="2" data-role="self" placeholder="스스로 느낀 점을 기록해보세요">${escHtml(r.self_note || "")}</textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      <button class="btn btn-ghost py-2 text-[12.5px] font-bold" data-role="save"><i class="fa-solid fa-floppy-disk mr-1"></i>메모 저장</button>
+      <button class="btn btn-ghost py-2 text-[12.5px] font-bold" data-role="delete" style="color:#B91C1C"><i class="fa-solid fa-trash mr-1"></i>삭제</button>
+    </div>
+  `;
+
+  wrap.querySelectorAll('img[data-full]').forEach(img => {
+    img.addEventListener("click", () => {
+      document.getElementById("imgModalImg").src = img.dataset.full;
+      document.getElementById("imgModalBg").style.display = "flex";
+    });
+  });
+  wrap.querySelector('[data-role="save"]').addEventListener("click", async () => {
+    const instructor = wrap.querySelector('[data-role="instructor"]').value;
+    const self = wrap.querySelector('[data-role="self"]').value;
+    try {
+      const res = await fetch(SB_URL + "/rest/v1/vball_records?id=eq." + r.id, {
+        method: "PATCH", headers: SB_HEADERS,
+        body: JSON.stringify({ instructor_feedback: instructor, self_note: self })
+      });
+      if (!res.ok) throw new Error();
+      showToast("✅ 메모가 저장됐어요");
+    } catch { showToast("⚠️ 메모 저장 실패"); }
+  });
+  wrap.querySelector('[data-role="delete"]').addEventListener("click", async () => {
+    if (!confirm("이 기록을 삭제할까요? 되돌릴 수 없어요.")) return;
+    try {
+      const res = await fetch(SB_URL + "/rest/v1/vball_records?id=eq." + r.id, { method: "DELETE", headers: SB_HEADERS });
+      if (!res.ok) throw new Error();
+      wrap.remove();
+      showToast("🗑️ 삭제됐어요");
+    } catch { showToast("⚠️ 삭제 실패"); }
+  });
+
+  return wrap;
+}
+
+/* ===================== 유틸 ===================== */
+function escHtml(s) {
+  return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+init();
+</script>
+</body>
+</html>

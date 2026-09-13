@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>슬기로운 배구생활 - 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --navy:#14213D; --navy-2:#1F2F52;
+  --coral:#FF6B4A; --coral-d:#E8542E; --coral-l:#FFE9E2;
+  --teal:#1FA98F; --teal-l:#E4F7F3;
+  --bg:#EEF1F6; --card:#FFFFFF; --line:#E2E7EF;
+  --text:#182236; --text-dim:#6B7688;
+}
+*{box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);margin:0}
+.disp{font-family:'Barlow Condensed','Noto Sans KR',sans-serif}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px}
+.btn{touch-action:manipulation}
+.btn-primary{background:var(--coral);color:#fff;font-weight:700;border-radius:12px}
+.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{background:#C9CFDA}
+.btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--text);border-radius:12px}
+.field{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;background:#F8F9FB;outline:none}
+.field:focus{border-color:var(--coral);background:#fff}
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;text-align:left;color:var(--text-dim);padding:8px 10px;border-bottom:1.5px solid var(--line)}
+td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
+.code-tag{font-family:'Barlow Condensed';font-weight:700;font-size:15px;background:var(--navy);color:#fff;padding:2px 10px;border-radius:8px;letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<!-- 비밀번호 게이트 -->
+<div id="gate" class="min-h-screen flex items-center justify-center px-5">
+  <div class="card p-7 w-full max-w-[380px]">
+    <div class="disp text-[24px] font-extrabold mb-1"><i class="fa-solid fa-user-shield mr-2" style="color:var(--coral)"></i>관리자 로그인</div>
+    <p class="text-[12.5px] mb-4" style="color:var(--text-dim)">슬기로운 배구생활 · 연수생 계정 관리</p>
+    <input id="pwInput" class="field" type="password" placeholder="관리자 비밀번호"/>
+    <p id="pwError" class="text-[12px] font-bold mt-2" style="color:#DC2626;display:none">비밀번호가 틀렸습니다.</p>
+    <button id="btnGate" class="btn btn-primary w-full py-3 text-[14px] mt-3.5">로그인</button>
+  </div>
+</div>
+
+<!-- 관리 화면 -->
+<div id="panel" style="display:none">
+  <header style="background:linear-gradient(135deg,var(--navy),var(--navy-2))">
+    <div class="max-w-[720px] mx-auto px-5 h-16 flex items-center justify-between">
+      <div class="disp text-white font-extrabold text-[19px]"><i class="fa-solid fa-volleyball mr-2" style="color:var(--coral)"></i>연수생 관리</div>
+      <button id="btnEdgeSettings" class="text-white/70 text-[12px] font-bold"><i class="fa-solid fa-gear"></i></button>
+    </div>
+  </header>
+
+  <main class="max-w-[720px] mx-auto px-5 py-5">
+    <details class="card p-3.5 mb-4">
+      <summary class="text-[13px] font-bold cursor-pointer" style="color:var(--text-dim)"><i class="fa-solid fa-gear mr-1"></i>Edge Function URL 설정</summary>
+      <div class="mt-2.5 flex gap-2">
+        <input id="edgeUrlInput" class="field" type="text"/>
+        <button id="btnSaveEdge" class="btn btn-ghost px-4 text-[13px] font-bold whitespace-nowrap">저장</button>
+      </div>
+    </details>
+
+    <div class="card p-4 mb-4">
+      <div class="text-[14px] font-extrabold mb-3">연수생 추가</div>
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2.5">
+        <input id="newName" class="field" type="text" placeholder="이름" maxlength="20"/>
+        <input id="newCode" class="field" type="text" placeholder="개인확인코드" maxlength="20"/>
+        <button id="btnRandomCode" class="btn btn-ghost px-3 text-[12.5px] font-bold whitespace-nowrap">코드 자동생성</button>
+      </div>
+      <button id="btnAdd" class="btn btn-primary w-full py-3 text-[14px] mt-3"><i class="fa-solid fa-plus mr-1.5"></i>연수생 추가</button>
+      <p id="addMsg" class="text-[12px] font-bold mt-2" style="display:none"></p>
+    </div>
+
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-[14px] font-extrabold">연수생 명단 (<span id="countText">0</span>명)</div>
+        <button id="btnRefresh" class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold"><i class="fa-solid fa-rotate mr-1"></i>새로고침</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>이름</th><th>개인확인코드</th><th>등록일</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p id="emptyMsg" class="text-[13px] text-center py-6" style="color:var(--text-dim);display:none">아직 등록된 연수생이 없어요.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const SB_URL = "https://pqjuvuflinnrpemqcafl.supabase.co";
+const DEFAULT_EDGE_URL = SB_URL + "/functions/v1/vball-api";
+let edgeUrl = localStorage.getItem("vball_edge_url") || DEFAULT_EDGE_URL;
+let adminPassword = "";
+
+document.getElementById("edgeUrlInput").value = edgeUrl;
+document.getElementById("btnSaveEdge").addEventListener("click", () => {
+  edgeUrl = document.getElementById("edgeUrlInput").value.trim() || DEFAULT_EDGE_URL;
+  localStorage.setItem("vball_edge_url", edgeUrl);
+});
+
+document.getElementById("btnGate").addEventListener("click", doGateLogin);
+document.getElementById("pwInput").addEventListener("keydown", e => { if (e.key === "Enter") doGateLogin(); });
+
+async function doGateLogin() {
+  const pw = document.getElementById("pwInput").value;
+  const errEl = document.getElementById("pwError");
+  errEl.style.display = "none";
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error();
+    adminPassword = pw;
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("panel").style.display = "block";
+    loadList();
+  } catch {
+    errEl.style.display = "block";
+  }
+}
+
+document.getElementById("btnRandomCode").addEventListener("click", () => {
+  document.getElementById("newCode").value = String(Math.floor(1000 + Math.random() * 9000));
+});
+document.getElementById("btnAdd").addEventListener("click", addTrainee);
+document.getElementById("btnRefresh").addEventListener("click", loadList);
+
+async function addTrainee() {
+  const name = document.getElementById("newName").value.trim();
+  const code = document.getElementById("newCode").value.trim();
+  const msgEl = document.getElementById("addMsg");
+  msgEl.style.display = "none";
+  if (!name || !code) { msgEl.textContent = "이름과 코드를 모두 입력해주세요."; msgEl.style.color = "#DC2626"; msgEl.style.display = "block"; return; }
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, name, code })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "추가 실패");
+    document.getElementById("newName").value = "";
+    document.getElementById("newCode").value = "";
+    msgEl.textContent = `✅ ${name} 연수생이 추가됐어요.`;
+    msgEl.style.color = "#1FA98F";
+    msgEl.style.display = "block";
+    loadList();
+  } catch (e) {
+    msgEl.textContent = "⚠️ " + e.message;
+    msgEl.style.color = "#DC2626";
+    msgEl.style.display = "block";
+  }
+}
+
+async function loadList() {
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6" style="color:var(--text-dim)">불러오는 중...</td></tr>`;
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "조회 실패");
+    renderList(data.trainees || []);
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6" style="color:#DC2626">불러오기 실패: ${e.message}</td></tr>`;
+  }
+}
+
+function renderList(rows) {
+  const tbody = document.getElementById("tbody");
+  document.getElementById("countText").textContent = rows.length;
+  document.getElementById("emptyMsg").style.display = rows.length === 0 ? "block" : "none";
+  tbody.innerHTML = "";
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    const dateStr = new Date(r.created_at).toLocaleDateString("ko-KR");
+    tr.innerHTML = `
+      <td class="font-bold">${escHtml(r.name)}</td>
+      <td><span class="code-tag">${escHtml(r.code)}</span></td>
+      <td style="color:var(--text-dim)">${dateStr}</td>
+      <td class="text-right"><button class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold" style="color:#B91C1C" data-id="${r.id}">삭제</button></td>
+    `;
+    tr.querySelector("button").addEventListener("click", () => deleteTrainee(r.id, r.name));
+    tbody.appendChild(tr);
+  });
+}
+
+async function deleteTrainee(id, name) {
+  if (!confirm(`${name} 연수생을 삭제할까요? 해당 연수생은 더 이상 로그인할 수 없어요.`)) return;
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, id })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "삭제 실패");
+    loadList();
+  } catch (e) {
+    alert("삭제 실패: " + e.message);
+  }
+}
+
+function escHtml(s) {
+  return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>
