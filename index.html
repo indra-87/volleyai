@@ -42,6 +42,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .toast-corner{position:fixed;right:14px;bottom:96px;background:var(--navy);color:#fff;font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(20,33,61,.35);z-index:80;display:flex;align-items:center;gap:8px;max-width:78vw;transition:opacity .25s, transform .25s;opacity:0;transform:translateY(8px);pointer-events:none}
 .toast-corner.show{opacity:1;transform:translateY(0)}
 .score-badge{font-family:'Barlow Condensed';font-weight:800;font-size:15px;padding:3px 11px;border-radius:20px;background:var(--navy);color:#fff}
+.mirrored{transform:scaleX(-1)}
 .frame-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);flex-shrink:0}
 .chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px}
 .day-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--text-dim);white-space:nowrap}
@@ -108,6 +109,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         </div>
         <div id="countOverlay" class="count-overlay" style="display:none"></div>
         <div id="recBadge" class="rec-badge" style="display:none"><span class="pulse-dot"></span><span id="recTimeText">15</span>초</div>
+        <button id="btnFlipCam" class="btn" style="display:none;position:absolute;top:10px;right:10px;z-index:6;background:rgba(0,0,0,.45);color:#fff;width:38px;height:38px;border-radius:50%">
+          <i class="fa-solid fa-camera-rotate"></i>
+        </button>
       </div>
 
       <div class="grid grid-cols-2 gap-2.5 mt-3.5" id="camButtons">
@@ -121,7 +125,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
       <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="previewButtons" style="display:none">
         <button id="btnRetake" class="btn btn-ghost py-3 text-[13.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1.5"></i>다시 촬영</button>
-        <button id="btnAnalyze" class="btn btn-primary py-3 text-[13.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AI 빠른 분석</button>
+        <button id="btnAnalyze" class="btn btn-primary py-3 text-[13.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AI 피드백</button>
       </div>
     </div>
 
@@ -219,6 +223,7 @@ const SB_HEADERS = {"Content-Type":"application/json","apikey":SB_KEY,"Authoriza
 const EDGE_URL = SB_URL + "/functions/v1/vball-api";
 
 const MOTIONS = [
+  {code:"serve", label:"서브",       em:"🎯"},
   {code:"toss",  label:"토스",       em:"🙌"},
   {code:"block", label:"블로킹",     em:"🧱"},
   {code:"spike", label:"스파이크",   em:"💥"},
@@ -244,6 +249,7 @@ let recordAutoStopTimeout = null;
 let trainingStartDate = null;
 let historyRows = [];
 let selectedDayFilter = "all";
+let currentFacing = "environment";
 
 /* ===================== 초기화 ===================== */
 async function init() {
@@ -293,6 +299,7 @@ function bindEvents() {
     localStorage.setItem("vball_countdown", e.target.checked ? "on" : "off");
   });
   document.getElementById("btnCamOn").addEventListener("click", startCamera);
+  document.getElementById("btnFlipCam").addEventListener("click", switchCamera);
   document.getElementById("btnRecord").addEventListener("click", startCountdownAndRecord);
   document.getElementById("btnStopRecord").addEventListener("click", stopRecordingNow);
   document.getElementById("btnRetake").addEventListener("click", resetToCamera);
@@ -378,7 +385,7 @@ function renderMotionGrid() {
 async function startCamera() {
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: true
     });
   } catch (e) {
@@ -388,9 +395,32 @@ async function startCamera() {
   const liveVideo = document.getElementById("liveVideo");
   liveVideo.srcObject = mediaStream;
   liveVideo.style.display = "block";
+  liveVideo.classList.toggle("mirrored", currentFacing === "user");
   document.getElementById("camPlaceholder").style.display = "none";
   document.getElementById("camButtons").style.display = "none";
   document.getElementById("recordButtons").style.display = "grid";
+  document.getElementById("btnFlipCam").style.display = "flex";
+}
+
+async function switchCamera() {
+  currentFacing = currentFacing === "environment" ? "user" : "environment";
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: true
+    });
+  } catch (e) {
+    alert("카메라를 전환하지 못했습니다. 이 기기에는 해당 카메라가 없을 수 있어요.");
+    currentFacing = currentFacing === "environment" ? "user" : "environment";
+    return;
+  }
+  const liveVideo = document.getElementById("liveVideo");
+  liveVideo.srcObject = mediaStream;
+  liveVideo.classList.toggle("mirrored", currentFacing === "user");
 }
 
 function resetToCamera() {
@@ -403,9 +433,11 @@ function resetToCamera() {
   if (mediaStream) {
     document.getElementById("liveVideo").style.display = "block";
     document.getElementById("recordButtons").style.display = "grid";
+    document.getElementById("btnFlipCam").style.display = "flex";
   } else {
     document.getElementById("camPlaceholder").style.display = "flex";
     document.getElementById("camButtons").style.display = "grid";
+    document.getElementById("btnFlipCam").style.display = "none";
   }
 }
 
@@ -443,6 +475,7 @@ function pickMimeType() {
 }
 
 function startRecording() {
+  document.getElementById("btnFlipCam").style.display = "none";
   recordedChunks = [];
   recordedMime = pickMimeType() || "video/webm";
   try {
