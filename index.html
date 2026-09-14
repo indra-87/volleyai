@@ -17,6 +17,7 @@
   --coral:#FF6B4A; --coral-d:#E8542E; --coral-l:#FFE9E2;
   --teal:#1FA98F; --teal-l:#E4F7F3;
   --amber:#F5A623; --amber-l:#FFF3DD;
+  --info:#6D5BD0; --info-l:#EFEAFB;
   --bg:#EEF1F6; --card:#FFFFFF; --line:#E2E7EF;
   --text:#182236; --text-dim:#6B7688;
 }
@@ -155,6 +156,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <div class="rounded-[12px] p-3 mb-2.5" style="background:var(--amber-l)">
           <div class="text-[12.5px] font-extrabold mb-1.5" style="color:#B45309"><i class="fa-solid fa-arrow-trend-up mr-1"></i>개선할 점</div>
           <ul id="improveList" class="text-[13px] leading-relaxed pl-4 list-disc" style="color:var(--text)"></ul>
+        </div>
+        <div class="rounded-[12px] p-3 mb-2.5" style="background:var(--info-l)">
+          <div class="text-[12.5px] font-extrabold mb-1.5" style="color:var(--info)"><i class="fa-solid fa-dumbbell mr-1"></i>이렇게 연습해보세요</div>
+          <ul id="practiceList" class="text-[13px] leading-relaxed pl-4 list-disc" style="color:var(--text)"></ul>
         </div>
         <p id="commentText" class="text-[12.5px] leading-relaxed" style="color:var(--text-dim)"></p>
       </div>
@@ -610,9 +615,13 @@ function extractFrames(blob) {
 
     v.onloadedmetadata = async () => {
       const duration = isFinite(v.duration) && v.duration > 0 ? v.duration : RECORD_SECONDS_MAX;
+      const srcW = v.videoWidth || 640;
+      const srcH = v.videoHeight || 480;
+      const MAX_W = 960; // Gemini 분석엔 고해상도가 필요 없어서 캔버스 크기를 제한 (속도/용량 개선)
+      const scale = srcW > MAX_W ? MAX_W / srcW : 1;
       const canvas = document.createElement("canvas");
-      canvas.width = v.videoWidth || 640;
-      canvas.height = v.videoHeight || 480;
+      canvas.width = Math.round(srcW * scale);
+      canvas.height = Math.round(srcH * scale);
       const ctx = canvas.getContext("2d");
       const frames = [];
       try {
@@ -677,8 +686,10 @@ function renderResult(data) {
   document.getElementById("resultScore").textContent = data.score ?? "-";
   const goodEl = document.getElementById("goodList");
   const impEl = document.getElementById("improveList");
+  const pracEl = document.getElementById("practiceList");
   goodEl.innerHTML = (data.good_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
   impEl.innerHTML = (data.improve_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
+  pracEl.innerHTML = (data.practice_tips || []).map(t => `<li>${escHtml(t)}</li>`).join("");
   document.getElementById("commentText").textContent = data.comment || "";
   document.getElementById("resultBody").style.display = "block";
 }
@@ -702,6 +713,7 @@ async function saveRecordInBackground(analysis, frames, blob, mimeType) {
         score: analysis.score ?? null,
         good_points: analysis.good_points || [],
         improve_points: analysis.improve_points || [],
+        practice_tips: analysis.practice_tips || [],
         ai_comment: analysis.comment || "",
         ai_model: analysis.ai_model || "",
         frames: frames,
@@ -857,6 +869,7 @@ async function downloadRecord(r) {
     summary += `AI 종합 점수: ${r.score ?? "-"}점\n\n`;
     summary += `[잘한 점]\n` + (r.good_points || []).map(t => "- " + t).join("\n") + `\n\n`;
     summary += `[개선할 점]\n` + (r.improve_points || []).map(t => "- " + t).join("\n") + `\n\n`;
+    summary += `[이렇게 연습해보세요]\n` + (r.practice_tips || []).map(t => "- " + t).join("\n") + `\n\n`;
     summary += `[AI 종합 코멘트]\n${r.ai_comment || "(없음)"}\n\n`;
     summary += `[강사 피드백]\n${r.instructor_feedback || "(없음)"}\n\n`;
     summary += `[내 생각]\n${r.self_note || "(없음)"}\n`;
@@ -911,6 +924,10 @@ function buildPdfContainer(records, title) {
         <div style="background:#FFF3DD;border-radius:10px;padding:12px 14px;margin-bottom:8px">
           <div style="font-size:12px;font-weight:800;color:#B45309;margin-bottom:5px">개선할 점</div>
           <div style="font-size:13px;line-height:1.7">${(r.improve_points || []).map(t => "• " + escHtml(t)).join("<br/>") || "-"}</div>
+        </div>
+        <div style="background:#EFEAFB;border-radius:10px;padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:800;color:#6D5BD0;margin-bottom:5px">이렇게 연습해보세요</div>
+          <div style="font-size:13px;line-height:1.7">${(r.practice_tips || []).map(t => "• " + escHtml(t)).join("<br/>") || "-"}</div>
         </div>
         <div style="font-size:13px;line-height:1.7;margin-bottom:6px"><b>AI 종합 코멘트</b><br/>${escHtml(r.ai_comment || "(없음)")}</div>
         <div style="font-size:13px;line-height:1.7;margin-bottom:6px"><b>강사 피드백</b><br/>${escHtml(r.instructor_feedback || "(없음)")}</div>
@@ -967,6 +984,7 @@ function buildRecordCard(r) {
   const frameHtml = (r.frames || []).map(f => `<img class="frame-thumb" src="${f}" data-full="${f}"/>`).join("");
   const goodHtml = (r.good_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
   const impHtml = (r.improve_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
+  const pracHtml = (r.practice_tips || []).map(t => `<li>${escHtml(t)}</li>`).join("");
 
   let videoHtml = "";
   if (r.video_status === "done" && r.video_filename) {
@@ -996,6 +1014,10 @@ function buildRecordCard(r) {
     <div class="rounded-[12px] p-2.5 mb-1" style="background:var(--amber-l)">
       <div class="text-[11.5px] font-extrabold mb-1" style="color:#B45309">개선할 점</div>
       <ul class="text-[12.5px] pl-4 list-disc leading-relaxed">${impHtml}</ul>
+    </div>
+    <div class="rounded-[12px] p-2.5 mb-1" style="background:var(--info-l)">
+      <div class="text-[11.5px] font-extrabold mb-1" style="color:var(--info)">이렇게 연습해보세요</div>
+      <ul class="text-[12.5px] pl-4 list-disc leading-relaxed">${pracHtml}</ul>
     </div>
 
     ${videoHtml}
