@@ -99,6 +99,16 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
       <p id="addMsg" class="text-[12px] font-bold mt-2" style="display:none"></p>
     </div>
 
+    <div class="card p-4 mb-4">
+      <div class="text-[14px] font-extrabold mb-1.5">연수생 일괄 추가</div>
+      <p class="text-[11.5px] mb-2.5" style="color:var(--text-dim)">
+        엑셀에서 <b>이름</b>, <b>개인확인코드</b> 두 열을 선택해서 복사한 다음 아래에 그대로 붙여넣으세요. (한 줄에 한 명씩, 쉼표로 입력해도 돼요)
+      </p>
+      <textarea id="bulkInput" class="field text-[13px]" rows="6" placeholder="홍길동	1234&#10;김철수	5678&#10;이영희	9012"></textarea>
+      <button id="btnBulkAdd" class="btn btn-primary w-full py-3 text-[14px] mt-3"><i class="fa-solid fa-file-import mr-1.5"></i>일괄 추가</button>
+      <div id="bulkResult" class="mt-2.5" style="display:none"></div>
+    </div>
+
     <div class="card p-4">
       <div class="flex items-center justify-between mb-3">
         <div class="text-[14px] font-extrabold">연수생 명단 (<span id="countText">0</span>명)</div>
@@ -240,6 +250,59 @@ async function addTrainee() {
     msgEl.textContent = "⚠️ " + e.message;
     msgEl.style.color = "#DC2626";
     msgEl.style.display = "block";
+  }
+}
+
+document.getElementById("btnBulkAdd").addEventListener("click", bulkAddTrainees);
+
+function parseBulkInput(text) {
+  return text.split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      let parts;
+      if (line.includes("\t")) parts = line.split("\t");
+      else if (line.includes(",")) parts = line.split(",");
+      else parts = line.split(/\s+/);
+      return { name: (parts[0] || "").trim(), code: (parts[1] || "").trim() };
+    })
+    .filter(it => it.name && it.code);
+}
+
+async function bulkAddTrainees() {
+  const raw = document.getElementById("bulkInput").value;
+  const items = parseBulkInput(raw);
+  const resultEl = document.getElementById("bulkResult");
+  resultEl.style.display = "block";
+  if (items.length === 0) {
+    resultEl.innerHTML = `<p class="text-[12px] font-bold" style="color:#DC2626">읽을 수 있는 줄이 없어요. '이름 코드' 형식으로 한 줄에 한 명씩 입력해주세요.</p>`;
+    return;
+  }
+  resultEl.innerHTML = `<p class="text-[12px] font-bold" style="color:var(--text-dim)">${items.length}명 처리 중...</p>`;
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_bulk_create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, items })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "일괄 추가 실패");
+    const created = data.created || [];
+    const skipped = data.skipped || [];
+    let html = `<p class="text-[12.5px] font-bold" style="color:var(--teal)">✅ ${created.length}명 추가 완료</p>`;
+    if (skipped.length > 0) {
+      html += `<p class="text-[12.5px] font-bold mt-1.5" style="color:#B45309">⚠️ ${skipped.length}명 건너뜀</p>`;
+      html += `<ul class="text-[11.5px] mt-1 pl-4 list-disc" style="color:var(--text-dim)">`;
+      html += skipped.map(s => `<li>${escHtml(s.name || "(이름없음)")} / ${escHtml(s.code || "(코드없음)")} — ${escHtml(s.reason)}</li>`).join("");
+      html += `</ul>`;
+    }
+    resultEl.innerHTML = html;
+    if (created.length > 0) {
+      document.getElementById("bulkInput").value = "";
+      loadList();
+    }
+  } catch (e) {
+    resultEl.innerHTML = `<p class="text-[12px] font-bold" style="color:#DC2626">⚠️ ${e.message}</p>`;
   }
 }
 
