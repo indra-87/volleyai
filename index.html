@@ -630,7 +630,7 @@ function extractFrames(blob) {
           const target = Math.min(frac * duration, Math.max(duration - 0.1, 0.05));
           await seekTo(v, target);
           ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-          frames.push(canvas.toDataURL("image/jpeg", 0.5));
+          frames.push({ time: Math.round(target * 10) / 10, image: canvas.toDataURL("image/jpeg", 0.5) });
         }
         resolve(frames);
       } catch (e) {
@@ -876,7 +876,8 @@ async function downloadRecord(r) {
     zip.file("분석결과.txt", summary);
 
     (r.frames || []).forEach((f, i) => {
-      const base64 = (f.split(",")[1]) || "";
+      const dataUrl = typeof f === "string" ? f : (f && f.image) || "";
+      const base64 = (dataUrl.split(",")[1]) || "";
       if (base64) zip.file(`frame_${i + 1}.jpg`, base64, { base64: true });
     });
 
@@ -909,7 +910,10 @@ function buildPdfContainer(records, title) {
   records.forEach((r, idx) => {
     const m = MOTION_MAP[r.motion_type] || { label: r.motion_type };
     const dateStr = new Date(r.created_at).toLocaleString("ko-KR");
-    const frameImgs = (r.frames || []).map(f => `<img src="${f}" style="width:106px;height:106px;object-fit:cover;border-radius:8px;border:1px solid #E2E7EF"/>`).join("");
+    const frameImgs = (r.frames || []).map(f => {
+      const src = typeof f === "string" ? f : (f && f.image) || "";
+      return `<img src="${src}" style="width:106px;height:106px;object-fit:cover;border-radius:8px;border:1px solid #E2E7EF"/>`;
+    }).join("");
     html += `
       <div style="${idx === 0 ? "" : "border-top:2px solid #E2E7EF;margin-top:22px;padding-top:22px;"}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -981,7 +985,10 @@ function buildRecordCard(r) {
   const wrap = document.createElement("div");
   wrap.className = "card p-4";
 
-  const frameHtml = (r.frames || []).map(f => `<img class="frame-thumb" src="${f}" data-full="${f}"/>`).join("");
+  const frameHtml = (r.frames || []).map(f => {
+    const src = typeof f === "string" ? f : (f && f.image) || "";
+    return `<img class="frame-thumb" src="${src}" data-full="${src}"/>`;
+  }).join("");
   const goodHtml = (r.good_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
   const impHtml = (r.improve_points || []).map(t => `<li>${escHtml(t)}</li>`).join("");
   const pracHtml = (r.practice_tips || []).map(t => `<li>${escHtml(t)}</li>`).join("");
