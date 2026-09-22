@@ -51,6 +51,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px}
 .day-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:700;border:1.5px solid var(--line);background:#fff;color:var(--text-dim);white-space:nowrap}
 .day-chip.sel{border-color:var(--coral);background:var(--coral-l);color:var(--coral-d)}
+.trainee-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer}
+.trainee-row:active{background:#F5F7FA}
 .sheet-bg{position:fixed;inset:0;background:rgba(20,33,61,.6);z-index:100;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom))}
 .field{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14.5px;font-family:'Noto Sans KR';background:#F8F9FB;outline:none}
@@ -132,9 +134,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="recordingButtons" style="display:none">
         <button id="btnStopRecord" class="btn py-3 text-[13.5px] font-bold col-span-2" style="background:#DC2626;color:#fff;border-radius:14px"><i class="fa-solid fa-stop mr-1.5"></i>촬영 종료</button>
       </div>
-      <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="previewButtons" style="display:none">
-        <button id="btnRetake" class="btn btn-ghost py-3 text-[13.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1.5"></i>다시 촬영</button>
-        <button id="btnAnalyze" class="btn btn-primary py-3 text-[13.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AI 피드백</button>
+      <div class="grid grid-cols-3 gap-2 mt-2.5" id="previewButtons" style="display:none">
+        <button id="btnRetake" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1"></i>다시 촬영</button>
+        <button id="btnAnalyze" class="btn btn-primary py-3 text-[12.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 피드백</button>
+        <button id="btnOpenShare" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-paper-plane mr-1"></i>보내기</button>
       </div>
     </div>
 
@@ -184,6 +187,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div id="historyList" class="space-y-3.5"></div>
   </section>
 
+  <!-- ===== TAB 3: 받은 영상 ===== -->
+  <section id="tabShared" style="display:none">
+    <div class="flex items-center justify-between mb-3.5 mt-1">
+      <div class="disp text-[20px] font-extrabold">받은 영상</div>
+      <button id="btnRefreshShared" class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold"><i class="fa-solid fa-rotate mr-1"></i>새로고침</button>
+    </div>
+    <div id="sharedEmpty" class="card p-8 text-center" style="display:none">
+      <i class="fa-solid fa-inbox text-3xl mb-2.5" style="color:var(--line)"></i>
+      <p class="text-[13px] font-semibold" style="color:var(--text-dim)">아직 받은 영상이 없어요.</p>
+    </div>
+    <div id="sharedList" class="space-y-3"></div>
+  </section>
+
 </main>
 
 <!-- 하단 탭바 -->
@@ -191,6 +207,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <div class="max-w-[560px] mx-auto w-full flex">
     <button class="tab-btn active" id="navAnalyze"><i class="fa-solid fa-video"></i>동작 분석</button>
     <button class="tab-btn" id="navHistory"><i class="fa-solid fa-chart-line"></i>성장 기록</button>
+    <button class="tab-btn relative" id="navShared">
+      <i class="fa-solid fa-inbox"></i>받은 영상
+      <span id="sharedBadge" style="display:none;position:absolute;top:2px;right:22%;background:#EF4444;color:#fff;font-size:9.5px;font-weight:800;min-width:15px;height:15px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px">0</span>
+    </button>
   </div>
 </nav>
 
@@ -218,6 +238,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <button id="btnCloseProfile" class="btn btn-ghost py-3 text-[13.5px] font-bold">닫기</button>
       <button id="btnLogout" class="btn py-3 text-[13.5px] font-bold" style="background:#FEE2E2;color:#B91C1C;border-radius:14px">로그아웃</button>
     </div>
+  </div>
+</div>
+
+<!-- 받는사람 선택 시트 -->
+<div id="shareSheetBg" class="sheet-bg" style="display:none">
+  <div class="sheet">
+    <div class="disp text-[19px] font-extrabold mb-1">누구에게 보낼까요?</div>
+    <p class="text-[12.5px] mb-3" style="color:var(--text-dim)">촬영한 영상을 다른 연수생에게 보내면, 그 사람이 직접 AI 분석을 받고 본인 기록으로 저장할 수 있어요.</p>
+    <input id="shareSearch" class="field mb-2.5" type="text" placeholder="이름으로 검색"/>
+    <div id="shareBatchRow" class="flex gap-2 overflow-x-auto pb-1 mb-2.5"></div>
+    <div id="shareList" class="space-y-1.5" style="max-height:40vh;overflow-y:auto"></div>
+    <p id="shareEmpty" class="text-[12.5px] text-center py-4" style="color:var(--text-dim);display:none">검색 결과가 없어요.</p>
+    <button id="btnCloseShare" class="btn btn-ghost w-full py-2.5 mt-3 text-[13px] font-bold">닫기</button>
   </div>
 </div>
 
@@ -268,6 +301,10 @@ let trainingStartDate = null;
 let historyRows = [];
 let selectedDayFilter = "all";
 let currentFacing = "environment";
+let allTrainees = [];
+let sharedItems = [];
+let shareBatchFilter = "all";
+let claimMode = null;
 
 /* ===================== 초기화 ===================== */
 async function init() {
@@ -300,6 +337,7 @@ async function init() {
 function bindEvents() {
   document.getElementById("navAnalyze").addEventListener("click", () => switchTab("analyze"));
   document.getElementById("navHistory").addEventListener("click", () => switchTab("history"));
+  document.getElementById("navShared").addEventListener("click", () => switchTab("shared"));
   document.getElementById("btnProfile").addEventListener("click", () => {
     document.getElementById("profileName").textContent = session ? session.name : "-";
     document.getElementById("profileSheetBg").style.display = "flex";
@@ -331,16 +369,22 @@ function bindEvents() {
     exportPdf(rows, `${session ? session.name : ""} · ${label}`, `배구_성장기록_${label}.pdf`);
   });
   document.getElementById("btnCloseImgModal").addEventListener("click", () => document.getElementById("imgModalBg").style.display = "none");
+  document.getElementById("btnOpenShare").addEventListener("click", openShareSheet);
+  document.getElementById("btnCloseShare").addEventListener("click", () => document.getElementById("shareSheetBg").style.display = "none");
+  document.getElementById("shareSearch").addEventListener("input", renderShareList);
+  document.getElementById("btnRefreshShared").addEventListener("click", loadSharedInbox);
 }
 
 /* ===================== 탭 전환 ===================== */
 function switchTab(tab) {
-  const isAnalyze = tab === "analyze";
-  document.getElementById("tabAnalyze").style.display = isAnalyze ? "block" : "none";
-  document.getElementById("tabHistory").style.display = isAnalyze ? "none" : "block";
-  document.getElementById("navAnalyze").classList.toggle("active", isAnalyze);
-  document.getElementById("navHistory").classList.toggle("active", !isAnalyze);
-  if (!isAnalyze) loadHistory();
+  document.getElementById("tabAnalyze").style.display = tab === "analyze" ? "block" : "none";
+  document.getElementById("tabHistory").style.display = tab === "history" ? "block" : "none";
+  document.getElementById("tabShared").style.display = tab === "shared" ? "block" : "none";
+  document.getElementById("navAnalyze").classList.toggle("active", tab === "analyze");
+  document.getElementById("navHistory").classList.toggle("active", tab === "history");
+  document.getElementById("navShared").classList.toggle("active", tab === "shared");
+  if (tab === "history") loadHistory();
+  if (tab === "shared") loadSharedInbox();
 }
 
 /* ===================== 로그인 ===================== */
@@ -370,7 +414,7 @@ async function doLogin() {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "확인 실패");
-    session = { id: data.id, name: data.name };
+    session = { id: data.id, name: data.name, batch: data.batch || "1기" };
     localStorage.setItem("vball_session", JSON.stringify(session));
     document.getElementById("loginScreen").style.display = "none";
     applySession();
@@ -387,6 +431,7 @@ function applySession() {
   document.getElementById("appNav").style.display = "flex";
   document.getElementById("nameLabel").textContent = session.name;
   document.getElementById("avatarInit").textContent = session.name.charAt(0);
+  loadSharedInbox();
 }
 
 /* ===================== 동작 선택 ===================== */
@@ -455,6 +500,9 @@ function resetToCamera() {
   document.getElementById("resultCard").style.display = "none";
   recordedBlob = null;
   lastAnalysis = null;
+  claimMode = null;
+  document.getElementById("btnOpenShare").style.display = "";
+  document.getElementById("btnRetake").innerHTML = '<i class="fa-solid fa-rotate-left mr-1"></i>다시 촬영';
   if (mediaStream) {
     document.getElementById("liveVideo").style.display = "block";
     document.getElementById("recordButtons").style.display = "grid";
@@ -670,8 +718,12 @@ async function runAnalysis() {
     lastAnalysis = { ...data, frames };
     renderResult(data);
 
-    // ===== 2단계: 백그라운드 비동기 저장 (DB + NAS) =====
-    saveRecordInBackground(data, frames, recordedBlob, recordedMime);
+    // ===== 2단계: 백그라운드 비동기 저장 (DB + NAS, 받은 영상이면 재업로드 없이 참조만) =====
+    if (claimMode) {
+      saveClaimedRecord(data, frames);
+    } else {
+      saveRecordInBackground(data, frames, recordedBlob, recordedMime);
+    }
 
   } catch (e) {
     document.getElementById("resultCard").style.display = "none";
@@ -748,6 +800,222 @@ async function saveRecordInBackground(analysis, frames, blob, mimeType) {
       method: "PATCH", headers: SB_HEADERS, body: JSON.stringify({ video_status: "failed" })
     }).catch(() => {});
     showToast("⚠️ NAS 저장 실패 (기록은 남아있어요)");
+  }
+}
+
+/* ===================== 받은 영상 분석 결과 저장 (재업로드 없이 기존 NAS 파일 참조) ===================== */
+async function saveClaimedRecord(analysis, frames) {
+  const sharedInfo = claimMode;
+  showToast("☁️ 기록 저장 중...");
+  try {
+    const insertRes = await fetch(SB_URL + "/rest/v1/vball_records", {
+      method: "POST",
+      headers: { ...SB_HEADERS, "Prefer": "return=representation" },
+      body: JSON.stringify({
+        trainee_name: session.name,
+        trainee_id: session.id,
+        motion_type: selectedMotion,
+        score: analysis.score ?? null,
+        good_points: analysis.good_points || [],
+        improve_points: analysis.improve_points || [],
+        practice_tips: analysis.practice_tips || [],
+        ai_comment: analysis.comment || "",
+        ai_model: analysis.ai_model || "",
+        frames: frames,
+        video_status: "done",
+        video_filename: sharedInfo.videoFilename
+      })
+    });
+    const rows = await insertRes.json();
+    if (!insertRes.ok) throw new Error(rows.message || "DB 저장 실패");
+    const recordId = rows[0].id;
+
+    await fetch(EDGE_URL + "?action=claim_shared", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shared_id: sharedInfo.sharedId, record_id: recordId })
+    }).catch(() => {});
+
+    showToast("✅ 저장 완료! 성장기록에서 확인하세요");
+    loadSharedInbox();
+  } catch (e) {
+    showToast("⚠️ 저장 실패: " + e.message);
+  }
+}
+
+/* ===================== 영상 공유 (다른 연수생에게 보내기) ===================== */
+async function loadTrainees() {
+  try {
+    const res = await fetch(EDGE_URL + "?action=list_trainees");
+    const data = await res.json();
+    allTrainees = data.trainees || [];
+  } catch (e) {
+    allTrainees = [];
+  }
+}
+
+async function openShareSheet() {
+  if (!recordedBlob) { showToast("⚠️ 먼저 영상을 촬영하거나 업로드해주세요"); return; }
+  if (!selectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
+  document.getElementById("shareSearch").value = "";
+  shareBatchFilter = (session && session.batch) || "1기";
+  document.getElementById("shareSheetBg").style.display = "flex";
+  if (allTrainees.length === 0) await loadTrainees();
+  renderShareBatchRow();
+  renderShareList();
+}
+
+function renderShareBatchRow() {
+  const row = document.getElementById("shareBatchRow");
+  row.innerHTML = "";
+  const batches = [...new Set(allTrainees.map(t => t.batch || "1기"))];
+  const mySelfBatch = session && session.batch;
+  batches.sort((a, b) => {
+    if (a === mySelfBatch) return -1;
+    if (b === mySelfBatch) return 1;
+    return a.localeCompare(b);
+  });
+  const makeChip = (label, value) => {
+    const c = document.createElement("button");
+    c.className = "btn day-chip" + (shareBatchFilter === value ? " sel" : "");
+    c.textContent = label;
+    c.addEventListener("click", () => { shareBatchFilter = value; renderShareBatchRow(); renderShareList(); });
+    return c;
+  };
+  row.appendChild(makeChip("전체", "all"));
+  batches.forEach(b => row.appendChild(makeChip(b, b)));
+}
+
+function renderShareList() {
+  const listEl = document.getElementById("shareList");
+  const q = document.getElementById("shareSearch").value.trim().toLowerCase();
+  const rows = allTrainees.filter(t => {
+    if (session && t.id === session.id) return false;
+    if (shareBatchFilter !== "all" && (t.batch || "1기") !== shareBatchFilter) return false;
+    if (q && !t.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  listEl.innerHTML = "";
+  document.getElementById("shareEmpty").style.display = rows.length === 0 ? "block" : "none";
+  rows.forEach(t => {
+    const row = document.createElement("div");
+    row.className = "trainee-row";
+    row.innerHTML = `<span class="font-bold text-[13.5px]">${escHtml(t.name)}</span><span class="chip" style="background:var(--coral-l);color:var(--coral-d)">${escHtml(t.batch || "1기")}</span>`;
+    row.addEventListener("click", () => sendToTrainee(t.id));
+    listEl.appendChild(row);
+  });
+}
+
+async function sendToTrainee(traineeId) {
+  document.getElementById("shareSheetBg").style.display = "none";
+  showToast("⏳ 영상 전송 중...");
+  try {
+    const ext = (recordedMime || "").includes("mp4") ? "mp4" : "webm";
+    const filename = `${selectedMotion}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const upRes = await fetch(EDGE_URL + "?action=upload&filename=" + encodeURIComponent(filename), {
+      method: "POST",
+      headers: { "x-video-type": recordedMime || "video/webm" },
+      body: recordedBlob
+    });
+    const upData = await upRes.json();
+    if (!upRes.ok || upData.error) throw new Error(upData.error || "업로드 실패");
+
+    const shRes = await fetch(EDGE_URL + "?action=share_video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from_id: session.id, to_id: traineeId, motion_type: selectedMotion, video_filename: filename })
+    });
+    const shData = await shRes.json();
+    if (!shRes.ok || shData.error) throw new Error(shData.error || "전송 실패");
+
+    showToast("✅ 전송 완료!");
+    resetToCamera();
+  } catch (e) {
+    showToast("⚠️ 전송 실패: " + e.message);
+  }
+}
+
+/* ===================== 받은 영상함 ===================== */
+async function loadSharedInbox() {
+  if (!session) return;
+  try {
+    const res = await fetch(EDGE_URL + "?action=list_shared&to_id=" + session.id);
+    const data = await res.json();
+    sharedItems = data.items || [];
+  } catch (e) {
+    sharedItems = [];
+  }
+  const badge = document.getElementById("sharedBadge");
+  if (sharedItems.length > 0) {
+    badge.textContent = sharedItems.length;
+    badge.style.display = "flex";
+  } else {
+    badge.style.display = "none";
+  }
+  renderSharedList();
+}
+
+function renderSharedList() {
+  const listEl = document.getElementById("sharedList");
+  const emptyEl = document.getElementById("sharedEmpty");
+  listEl.innerHTML = "";
+  emptyEl.style.display = sharedItems.length === 0 ? "block" : "none";
+  sharedItems.forEach(item => {
+    const m = MOTION_MAP[item.motion_type] || { label: item.motion_type, em: "🏐" };
+    const dateStr = new Date(item.created_at).toLocaleString("ko-KR");
+    const card = document.createElement("div");
+    card.className = "card p-4 flex items-center justify-between gap-2";
+    card.innerHTML = `
+      <div class="min-w-0">
+        <div class="text-[13.5px] font-extrabold truncate">${escHtml(item.from_name)}님이 보냄</div>
+        <div class="text-[12px]" style="color:var(--text-dim)">${m.em} ${escHtml(m.label)} · ${dateStr}</div>
+      </div>
+      <button class="btn btn-primary px-4 py-2 text-[12.5px] flex-shrink-0" data-role="open">분석하기</button>
+    `;
+    card.querySelector('[data-role="open"]').addEventListener("click", () => openSharedItem(item));
+    listEl.appendChild(card);
+  });
+}
+
+async function openSharedItem(item) {
+  showToast("⏳ 영상 불러오는 중...");
+  try {
+    const src = EDGE_URL + "?action=stream&filename=" + encodeURIComponent(item.video_filename);
+    const res = await fetch(src);
+    if (!res.ok) throw new Error("영상을 가져오지 못했어요");
+    const blob = await res.blob();
+
+    selectedMotion = item.motion_type;
+    recordedBlob = blob;
+    recordedMime = blob.type || (item.video_filename.endsWith(".mp4") ? "video/mp4" : "video/webm");
+    claimMode = { sharedId: item.id, videoFilename: item.video_filename, fromName: item.from_name };
+
+    const grid = document.getElementById("motionGrid");
+    Array.from(grid.children).forEach(c => c.classList.remove("sel"));
+    const idx = MOTIONS.findIndex(m => m.code === item.motion_type);
+    if (idx >= 0 && grid.children[idx]) grid.children[idx].classList.add("sel");
+
+    const url = URL.createObjectURL(blob);
+    document.getElementById("liveVideo").style.display = "none";
+    document.getElementById("camPlaceholder").style.display = "none";
+    document.getElementById("camButtons").style.display = "none";
+    document.getElementById("recordButtons").style.display = "none";
+    document.getElementById("recordingButtons").style.display = "none";
+    document.getElementById("btnFlipCam").style.display = "none";
+    const previewVideo = document.getElementById("previewVideo");
+    previewVideo.classList.remove("mirrored");
+    previewVideo.src = url;
+    previewVideo.style.display = "block";
+    document.getElementById("previewButtons").style.display = "grid";
+    document.getElementById("btnOpenShare").style.display = "none";
+    document.getElementById("btnRetake").innerHTML = '<i class="fa-solid fa-xmark mr-1"></i>취소';
+    document.getElementById("resultCard").style.display = "none";
+
+    switchTab("analyze");
+    showToast(`📩 ${item.from_name}님이 보낸 영상이에요`);
+  } catch (e) {
+    showToast("⚠️ " + e.message);
   }
 }
 
