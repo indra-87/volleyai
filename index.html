@@ -101,9 +101,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="card p-4 mb-3.5">
       <div class="flex items-center justify-between mb-3">
         <div class="text-[14px] font-extrabold">2. 동작 촬영 (최대 15초)</div>
-        <label class="flex items-center gap-1.5 text-[11.5px] font-bold" style="color:var(--text-dim)">
-          <input type="checkbox" id="countdownToggle" class="w-3.5 h-3.5"/> 3초 카운트다운
-        </label>
+        <div class="flex items-center gap-3">
+          <button id="btnLibraryPersonal" class="text-[11.5px] font-bold" style="color:var(--text-dim)"><i class="fa-solid fa-box-archive mr-1"></i>보관함</button>
+          <label class="flex items-center gap-1.5 text-[11.5px] font-bold" style="color:var(--text-dim)">
+            <input type="checkbox" id="countdownToggle" class="w-3.5 h-3.5"/> 3초 카운트다운
+          </label>
+        </div>
       </div>
 
       <div class="relative rounded-[14px] overflow-hidden bg-black" style="aspect-ratio:3/4">
@@ -134,9 +137,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="recordingButtons" style="display:none">
         <button id="btnStopRecord" class="btn py-3 text-[13.5px] font-bold col-span-2" style="background:#DC2626;color:#fff;border-radius:14px"><i class="fa-solid fa-stop mr-1.5"></i>촬영 종료</button>
       </div>
-      <div class="grid grid-cols-2 gap-2.5 mt-2.5" id="previewButtons" style="display:none">
-        <button id="btnRetake" class="btn btn-ghost py-3 text-[13.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1.5"></i>다시 촬영</button>
-        <button id="btnAnalyze" class="btn btn-primary py-3 text-[13.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AI 피드백</button>
+      <div class="grid grid-cols-3 gap-2 mt-2.5" id="previewButtons" style="display:none">
+        <button id="btnRetake" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1"></i>다시 촬영</button>
+        <button id="btnAnalyze" class="btn btn-primary py-3 text-[12.5px]"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 피드백</button>
+        <button id="btnSaveLibraryPersonal" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-box-archive mr-1"></i>영상 저장</button>
       </div>
     </div>
 
@@ -173,21 +177,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   <section id="tabCapture" style="display:none">
 
     <div class="card p-4 mb-3.5">
-      <div class="text-[14px] font-extrabold mb-3">1. 촬영할 동작을 선택하세요</div>
-      <div id="capMotionGrid" class="grid grid-cols-3 gap-2.5"></div>
-    </div>
-
-    <div class="card p-4 mb-3.5">
       <div class="flex items-center justify-between mb-2">
-        <div class="text-[13.5px] font-extrabold">받는 사람 미리 정하기 (선택)</div>
+        <div class="text-[13.5px] font-extrabold">1. 받는 사람 미리 정하기 (선택)</div>
         <button id="capBtnPickTarget" class="btn btn-ghost px-3 py-1.5 text-[11.5px] font-bold">선택</button>
       </div>
+      <p class="text-[11px] mb-1.5" style="color:var(--text-dim)">동작 종류는 받는 사람이 분석할 때 직접 고르니, 여기서는 안 정해도 돼요.</p>
       <div id="capTargetChip" style="display:none;background:var(--coral-l)" class="items-center justify-between rounded-[10px] px-3 py-2 mb-1">
         <span class="text-[13px] font-bold" style="color:var(--coral-d)" id="capTargetName">-</span>
         <button id="capBtnClearTarget" class="text-[12px] font-bold" style="color:var(--coral-d)">✕</button>
       </div>
       <label id="capAutoSendRow" style="display:none;color:var(--text-dim)" class="items-center gap-2 text-[12.5px] font-bold mt-1.5">
         <input type="checkbox" id="capAutoSend" class="w-4 h-4"/> 촬영 후 자동으로 전송
+      </label>
+      <label class="flex items-center gap-2 text-[12.5px] font-bold mt-2" style="color:var(--text-dim)">
+        <input type="checkbox" id="capAutoSaveLibrary" class="w-4 h-4"/> 촬영 후 자동으로 보관함에 저장 (전송 대상 없을 때)
       </label>
     </div>
 
@@ -233,7 +236,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="grid grid-cols-3 gap-2 mt-2.5" id="capPreviewButtons" style="display:none">
         <button id="capBtnRetake" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-rotate-left mr-1"></i>다시 촬영</button>
         <button id="capBtnSend" class="btn btn-primary py-3 text-[12.5px]"><i class="fa-solid fa-paper-plane mr-1"></i>보내기</button>
-        <button id="capBtnSaveLibrary" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-box-archive mr-1"></i>보관함</button>
+        <button id="capBtnSaveLibrary" class="btn btn-ghost py-3 text-[12.5px] font-bold"><i class="fa-solid fa-box-archive mr-1"></i>영상 저장</button>
       </div>
     </div>
 
@@ -350,6 +353,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
+<!-- 영상 미리보기 모달 -->
+<div id="videoPreviewBg" class="sheet-bg" style="display:none;align-items:center">
+  <div style="max-width:420px;width:92%">
+    <video id="videoPreviewPlayer" controls playsinline style="width:100%;border-radius:14px;background:#000;max-height:70vh"></video>
+    <button id="btnCloseVideoPreview" class="btn btn-ghost w-full py-2.5 mt-3 text-[13px] font-bold" style="background:#fff">닫기</button>
+  </div>
+</div>
+
 <!-- 이미지 확대 모달 -->
 <div id="imgModalBg" class="sheet-bg" style="display:none;align-items:center">
   <div style="max-width:520px;width:92%" >
@@ -411,6 +422,9 @@ let capCurrentFacing = "environment";
 let presetTarget = null;
 let saveLibTarget = null;
 let sharePickerCallback = null;
+let capBusy = false;
+let saveLibState = null; // { mode: 'new'|'edit', purpose, pendingBlob, pendingMime, afterSave, libraryId }
+let currentLibraryPurpose = "send";
 let allTrainees = [];
 let sharedItems = [];
 let shareBatchFilter = "all";
@@ -419,7 +433,6 @@ let claimMode = null;
 /* ===================== 초기화 ===================== */
 async function init() {
   renderMotionGrid();
-  renderMotionGridCap();
   bindEvents();
 
   const countdownPref = localStorage.getItem("vball_countdown") === "on";
@@ -494,7 +507,7 @@ function bindEvents() {
   document.getElementById("capVideoFileInput").addEventListener("change", handleFileUploadCap);
   document.getElementById("capBtnRecord").addEventListener("click", startCountdownAndRecordCap);
   document.getElementById("capBtnStopRecord").addEventListener("click", stopRecordingNowCap);
-  document.getElementById("capBtnRetake").addEventListener("click", resetToCameraCap);
+  document.getElementById("capBtnRetake").addEventListener("click", () => { if (!capBusy) resetToCameraCap(); });
   document.getElementById("capCountdownToggle").addEventListener("change", e => {
     localStorage.setItem("vball_countdown_cap", e.target.checked ? "on" : "off");
   });
@@ -515,8 +528,8 @@ function bindEvents() {
   });
 
   document.getElementById("capBtnSend").addEventListener("click", () => {
+    if (capBusy) return;
     if (!capRecordedBlob) { showToast("⚠️ 먼저 영상을 촬영하거나 업로드해주세요"); return; }
-    if (!capSelectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
     if (presetTarget) {
       doSendCap(presetTarget.id, presetTarget.name);
     } else {
@@ -525,18 +538,17 @@ function bindEvents() {
   });
 
   document.getElementById("capBtnSaveLibrary").addEventListener("click", () => {
+    if (capBusy) return;
     if (!capRecordedBlob) { showToast("⚠️ 먼저 영상을 촬영하거나 업로드해주세요"); return; }
-    if (!capSelectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
-    document.getElementById("saveLibMemo").value = "";
-    saveLibTarget = null;
-    document.getElementById("saveLibTargetChip").style.display = "none";
-    document.getElementById("saveLibSheetBg").style.display = "flex";
+    openSaveLibrarySheet({ mode: "new", purpose: "send", pendingBlob: capRecordedBlob, pendingMime: capRecordedMime, afterSave: resetToCameraCap });
   });
   document.getElementById("saveLibBtnPickTarget").addEventListener("click", () => {
+    document.getElementById("saveLibSheetBg").style.display = "none";
     openTraineePicker(t => {
       saveLibTarget = t;
       document.getElementById("saveLibTargetChip").style.display = "flex";
       document.getElementById("saveLibTargetName").textContent = t.name;
+      document.getElementById("saveLibSheetBg").style.display = "flex";
     }, "이 영상은 누구 것인가요?");
   });
   document.getElementById("saveLibBtnClearTarget").addEventListener("click", () => {
@@ -548,11 +560,20 @@ function bindEvents() {
   });
   document.getElementById("btnConfirmSaveLib").addEventListener("click", confirmSaveToLibrary);
 
-  document.getElementById("capBtnLibrary").addEventListener("click", () => {
-    document.getElementById("librarySheetBg").style.display = "flex";
-    loadLibrary();
-  });
+  document.getElementById("capBtnLibrary").addEventListener("click", () => openLibraryList("send"));
   document.getElementById("btnCloseLibrary").addEventListener("click", () => document.getElementById("librarySheetBg").style.display = "none");
+  document.getElementById("btnCloseVideoPreview").addEventListener("click", () => {
+    const p = document.getElementById("videoPreviewPlayer");
+    p.pause(); p.src = "";
+    document.getElementById("videoPreviewBg").style.display = "none";
+  });
+
+  /* --- 개인 분석 탭: 개인 보관함 --- */
+  document.getElementById("btnLibraryPersonal").addEventListener("click", () => openLibraryList("personal"));
+  document.getElementById("btnSaveLibraryPersonal").addEventListener("click", () => {
+    if (!recordedBlob) { showToast("⚠️ 먼저 영상을 촬영하거나 업로드해주세요"); return; }
+    openSaveLibrarySheet({ mode: "new", purpose: "personal", pendingBlob: recordedBlob, pendingMime: recordedMime, afterSave: resetToCamera });
+  });
 }
 
 /* ===================== 탭 전환 ===================== */
@@ -683,6 +704,7 @@ function resetToCamera() {
   recordedBlob = null;
   lastAnalysis = null;
   claimMode = null;
+  document.getElementById("btnSaveLibraryPersonal").style.display = "";
   document.getElementById("btnRetake").innerHTML = '<i class="fa-solid fa-rotate-left mr-1"></i>다시 촬영';
   if (mediaStream) {
     document.getElementById("liveVideo").style.display = "block";
@@ -835,22 +857,6 @@ async function handleFileUpload(e) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 /* ===================== 영상 촬영 탭 전용 카메라 엔진 (개인 분석과 완전히 독립) ===================== */
-function renderMotionGridCap() {
-  const grid = document.getElementById("capMotionGrid");
-  grid.innerHTML = "";
-  MOTIONS.forEach(m => {
-    const btn = document.createElement("button");
-    btn.className = "btn motion-btn";
-    btn.innerHTML = `<span class="em">${m.em}</span><span>${m.label}</span>`;
-    btn.addEventListener("click", () => {
-      capSelectedMotion = m.code;
-      Array.from(grid.children).forEach(c => c.classList.remove("sel"));
-      btn.classList.add("sel");
-    });
-    grid.appendChild(btn);
-  });
-}
-
 async function startCameraCap() {
   try {
     capMediaStream = await navigator.mediaDevices.getUserMedia({
@@ -909,7 +915,6 @@ function resetToCameraCap() {
 }
 
 async function startCountdownAndRecordCap() {
-  if (!capSelectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
   if (!capMediaStream) { alert("카메라를 먼저 켜주세요."); return; }
 
   const useCountdown = document.getElementById("capCountdownToggle").checked;
@@ -981,7 +986,6 @@ async function handleFileUploadCap(e) {
   const file = e.target.files[0];
   e.target.value = "";
   if (!file) return;
-  if (!capSelectedMotion) { alert("먼저 촬영할 동작을 선택해주세요."); return; }
 
   if (file.size > UPLOAD_MAX_BYTES) {
     alert(`파일 용량이 너무 커요 (최대 50MB, 현재 약 ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
@@ -1025,7 +1029,40 @@ async function handleFileUploadCap(e) {
 function maybeAutoSendCap() {
   if (presetTarget && document.getElementById("capAutoSend").checked) {
     doSendCap(presetTarget.id, presetTarget.name);
+  } else if (!presetTarget && document.getElementById("capAutoSaveLibrary").checked) {
+    autoSaveToLibraryCap();
   }
+}
+
+async function autoSaveToLibraryCap() {
+  if (capBusy) return;
+  capBusy = true;
+  setCapBusyUI(true);
+  showToast("⏳ 보관함에 자동 저장 중...");
+  try {
+    const filename = await uploadVideoToNas(capRecordedBlob, capRecordedMime, capSelectedMotion);
+    const res = await fetch(EDGE_URL + "?action=save_to_library", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ owner_id: session.id, motion_type: capSelectedMotion, video_filename: filename, memo: "", target_id: null, purpose: "send" })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "저장 실패");
+    showToast("✅ 보관함에 자동 저장됐어요");
+    resetToCameraCap();
+  } catch (e) {
+    showToast("⚠️ 자동 저장 실패: " + e.message);
+  } finally {
+    capBusy = false;
+    setCapBusyUI(false);
+  }
+}
+
+function setCapBusyUI(busy) {
+  ["capBtnRetake", "capBtnSend", "capBtnSaveLibrary"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = busy;
+  });
 }
 
 /* ===================== 프레임 추출 (실제 녹화 길이에 맞춰 균등 추출) ===================== */
@@ -1075,6 +1112,7 @@ function seekTo(videoEl, time) {
 async function runAnalysis() {
   if (!recordedBlob) return;
   if (!session) { openLoginSheet(); return; }
+  if (!selectedMotion) { alert("먼저 어떤 동작인지 선택해주세요."); return; }
   document.getElementById("resultCard").style.display = "block";
   document.getElementById("loadingBox").style.display = "flex";
   document.getElementById("resultBody").style.display = "none";
@@ -1180,7 +1218,7 @@ async function saveRecordInBackground(analysis, frames, blob, mimeType) {
 
 /* ===================== 받은 영상 분석 결과 저장 (재업로드 없이 기존 NAS 파일 참조) ===================== */
 async function saveClaimedRecord(analysis, frames) {
-  const sharedInfo = claimMode;
+  const info = claimMode;
   showToast("☁️ 기록 저장 중...");
   try {
     const insertRes = await fetch(SB_URL + "/rest/v1/vball_records", {
@@ -1198,21 +1236,29 @@ async function saveClaimedRecord(analysis, frames) {
         ai_model: analysis.ai_model || "",
         frames: frames,
         video_status: "done",
-        video_filename: sharedInfo.videoFilename
+        video_filename: info.videoFilename
       })
     });
     const rows = await insertRes.json();
     if (!insertRes.ok) throw new Error(rows.message || "DB 저장 실패");
     const recordId = rows[0].id;
 
-    await fetch(EDGE_URL + "?action=claim_shared", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shared_id: sharedInfo.sharedId, record_id: recordId })
-    }).catch(() => {});
+    if (info.source === "library") {
+      await fetch(EDGE_URL + "?action=mark_library_used", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ library_id: info.libraryId })
+      }).catch(() => {});
+    } else {
+      await fetch(EDGE_URL + "?action=claim_shared", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shared_id: info.sharedId, record_id: recordId })
+      }).catch(() => {});
+      loadSharedInbox();
+    }
 
     showToast("✅ 저장 완료! 성장기록에서 확인하세요");
-    loadSharedInbox();
   } catch (e) {
     showToast("⚠️ 저장 실패: " + e.message);
   }
@@ -1323,6 +1369,9 @@ async function sendVideoToTrainee(traineeId, blob, mimeType, motionType) {
 }
 
 async function doSendCap(traineeId, traineeName) {
+  if (capBusy) return;
+  capBusy = true;
+  setCapBusyUI(true);
   showToast("⏳ 영상 전송 중...");
   try {
     await sendVideoToTrainee(traineeId, capRecordedBlob, capRecordedMime, capSelectedMotion);
@@ -1330,41 +1379,89 @@ async function doSendCap(traineeId, traineeName) {
     resetToCameraCap();
   } catch (e) {
     showToast("⚠️ 전송 실패: " + e.message);
+  } finally {
+    capBusy = false;
+    setCapBusyUI(false);
   }
+}
+
+/* ===================== 보관함 저장 시트 (신규 저장 / 기존 항목 메모·대상 수정 공용) ===================== */
+function openSaveLibrarySheet(opts) {
+  saveLibState = opts;
+  saveLibTarget = null;
+  document.getElementById("saveLibMemo").value = (opts.memo || "");
+  document.getElementById("saveLibTargetChip").style.display = "none";
+  document.getElementById("saveLibBtnPickTarget").style.display = opts.purpose === "personal" ? "none" : "block";
+  if (opts.mode === "edit" && opts.targetName) {
+    saveLibTarget = { id: opts.targetId, name: opts.targetName };
+    document.getElementById("saveLibTargetChip").style.display = "flex";
+    document.getElementById("saveLibTargetName").textContent = opts.targetName;
+  }
+  document.getElementById("saveLibSheetBg").style.display = "flex";
 }
 
 async function confirmSaveToLibrary() {
+  if (capBusy) return;
+  const state = saveLibState;
+  if (!state) return;
   document.getElementById("saveLibSheetBg").style.display = "none";
-  showToast("⏳ 보관함에 저장 중...");
+  capBusy = true;
+  setCapBusyUI(true);
+  const memo = document.getElementById("saveLibMemo").value.trim();
+
   try {
-    const filename = await uploadVideoToNas(capRecordedBlob, capRecordedMime, capSelectedMotion);
-    const memo = document.getElementById("saveLibMemo").value.trim();
-    const res = await fetch(EDGE_URL + "?action=save_to_library", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        owner_id: session.id,
-        motion_type: capSelectedMotion,
-        video_filename: filename,
-        memo,
-        target_id: saveLibTarget ? saveLibTarget.id : null
-      })
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || "저장 실패");
-    showToast("✅ 보관함에 저장했어요");
-    resetToCameraCap();
+    if (state.mode === "edit") {
+      showToast("⏳ 저장 중...");
+      const res = await fetch(EDGE_URL + "?action=update_library_item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ library_id: state.libraryId, memo, target_id: saveLibTarget ? saveLibTarget.id : null })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "수정 실패");
+      showToast("✅ 수정했어요");
+      openLibraryList(currentLibraryPurpose);
+    } else {
+      showToast("⏳ 보관함에 저장 중...");
+      const filename = await uploadVideoToNas(state.pendingBlob, state.pendingMime, null);
+      const res = await fetch(EDGE_URL + "?action=save_to_library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_id: session.id,
+          motion_type: null,
+          video_filename: filename,
+          memo,
+          target_id: saveLibTarget ? saveLibTarget.id : null,
+          purpose: state.purpose
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "저장 실패");
+      showToast("✅ 보관함에 저장했어요");
+      if (state.afterSave) state.afterSave();
+    }
   } catch (e) {
     showToast("⚠️ 저장 실패: " + e.message);
+  } finally {
+    capBusy = false;
+    setCapBusyUI(false);
+    saveLibState = null;
   }
 }
 
-/* ===================== 영상 보관함 ===================== */
+/* ===================== 영상 보관함 목록 (전송용 / 개인용 공용) ===================== */
+function openLibraryList(purpose) {
+  currentLibraryPurpose = purpose;
+  document.getElementById("librarySheetBg").style.display = "flex";
+  loadLibrary();
+}
+
 async function loadLibrary() {
   const listEl = document.getElementById("libraryList");
   listEl.innerHTML = `<div class="flex justify-center py-6"><div class="spinner"></div></div>`;
   try {
-    const res = await fetch(EDGE_URL + "?action=list_library&owner_id=" + session.id);
+    const res = await fetch(EDGE_URL + "?action=list_library&owner_id=" + session.id + "&purpose=" + currentLibraryPurpose);
     const data = await res.json();
     renderLibraryList(data.items || []);
   } catch (e) {
@@ -1377,29 +1474,53 @@ function renderLibraryList(items) {
   document.getElementById("libraryEmpty").style.display = items.length === 0 ? "block" : "none";
   listEl.innerHTML = "";
   items.forEach(it => {
-    const m = MOTION_MAP[it.motion_type] || { label: it.motion_type, em: "🏐" };
+    const m = it.motion_type ? (MOTION_MAP[it.motion_type] || { label: it.motion_type, em: "🏐" }) : null;
     const dateStr = new Date(it.created_at).toLocaleString("ko-KR");
     const row = document.createElement("div");
     row.className = "card p-3";
+    const actionBtns = currentLibraryPurpose === "personal"
+      ? `<button class="btn btn-primary py-2 text-[12px]" data-role="analyze">분석하기</button>`
+      : `<button class="btn btn-primary py-2 text-[12px]" data-role="send">보내기</button>`;
     row.innerHTML = `
       <div class="flex items-center justify-between mb-1.5">
-        <span class="text-[13px] font-extrabold">${m.em} ${escHtml(m.label)}</span>
+        <span class="text-[13px] font-extrabold">${m ? m.em + " " + escHtml(m.label) : "🏐 동작 미지정"}</span>
         <span class="text-[11px]" style="color:var(--text-dim)">${dateStr}</span>
       </div>
       ${it.memo ? `<div class="text-[12.5px] mb-1.5" style="color:var(--text-dim)">📝 ${escHtml(it.memo)}</div>` : ""}
       ${it.target_name ? `<div class="text-[12px] font-bold mb-2" style="color:var(--coral-d)">→ ${escHtml(it.target_name)}님 지정됨</div>` : ""}
-      <div class="grid grid-cols-2 gap-2">
-        <button class="btn btn-primary py-2 text-[12px]" data-role="send">보내기</button>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="btn btn-ghost py-2 text-[12px] font-bold" data-role="preview">미리보기</button>
+        ${actionBtns}
         <button class="btn btn-ghost py-2 text-[12px] font-bold" style="color:#B91C1C" data-role="del">삭제</button>
       </div>
+      ${currentLibraryPurpose === "send" ? `<button class="btn btn-ghost w-full py-1.5 text-[11.5px] font-bold mt-2" data-role="edit" style="color:var(--text-dim)"><i class="fa-solid fa-pen mr-1"></i>메모/받을 사람 수정</button>` : ""}
     `;
-    row.querySelector('[data-role="send"]').addEventListener("click", () => {
-      if (it.target_trainee_id) {
-        sendLibraryItemTo(it.id, it.target_trainee_id, it.target_name);
-      } else {
-        openTraineePicker(t => sendLibraryItemTo(it.id, t.id, t.name), "누구에게 보낼까요?");
-      }
-    });
+    row.querySelector('[data-role="preview"]').addEventListener("click", () => openVideoPreview(it.video_filename));
+    if (currentLibraryPurpose === "personal") {
+      row.querySelector('[data-role="analyze"]').addEventListener("click", () => openLibraryItemForAnalysis(it));
+    } else {
+      row.querySelector('[data-role="send"]').addEventListener("click", () => {
+        if (it.target_trainee_id) {
+          sendLibraryItemTo(it.id, it.target_trainee_id, it.target_name);
+        } else {
+          document.getElementById("librarySheetBg").style.display = "none";
+          openTraineePicker(t => {
+            sendLibraryItemTo(it.id, t.id, t.name).then(() => {
+              document.getElementById("librarySheetBg").style.display = "flex";
+            });
+          }, "누구에게 보낼까요?");
+        }
+      });
+      const editBtn = row.querySelector('[data-role="edit"]');
+      if (editBtn) editBtn.addEventListener("click", () => {
+        document.getElementById("librarySheetBg").style.display = "none";
+        openSaveLibrarySheet({
+          mode: "edit", purpose: "send", libraryId: it.id, memo: it.memo || "",
+          targetId: it.target_trainee_id, targetName: it.target_name,
+          afterSave: () => { document.getElementById("librarySheetBg").style.display = "flex"; }
+        });
+      });
+    }
     row.querySelector('[data-role="del"]').addEventListener("click", async () => {
       if (!confirm("이 보관함 영상을 삭제할까요?")) return;
       try {
@@ -1414,8 +1535,15 @@ function renderLibraryList(items) {
   });
 }
 
+function openVideoPreview(filename) {
+  const src = EDGE_URL + "?action=stream&filename=" + encodeURIComponent(filename);
+  const player = document.getElementById("videoPreviewPlayer");
+  player.src = src;
+  document.getElementById("videoPreviewBg").style.display = "flex";
+  player.play().catch(() => {});
+}
+
 async function sendLibraryItemTo(libraryId, toId, toName) {
-  document.getElementById("shareSheetBg").style.display = "none";
   showToast("⏳ 전송 중...");
   try {
     const res = await fetch(EDGE_URL + "?action=send_library_item", {
@@ -1425,6 +1553,46 @@ async function sendLibraryItemTo(libraryId, toId, toName) {
     if (!res.ok || data.error) throw new Error(data.error || "전송 실패");
     showToast(`✅ ${toName}님에게 전송 완료`);
     loadLibrary();
+  } catch (e) {
+    showToast("⚠️ " + e.message);
+  }
+}
+
+async function openLibraryItemForAnalysis(item) {
+  document.getElementById("librarySheetBg").style.display = "none";
+  showToast("⏳ 영상 불러오는 중...");
+  try {
+    const src = EDGE_URL + "?action=stream&filename=" + encodeURIComponent(item.video_filename);
+    const res = await fetch(src);
+    if (!res.ok) throw new Error("영상을 가져오지 못했어요");
+    const blob = await res.blob();
+
+    recordedBlob = blob;
+    recordedMime = blob.type || (item.video_filename.endsWith(".mp4") ? "video/mp4" : "video/webm");
+    claimMode = { source: "library", libraryId: item.id, videoFilename: item.video_filename };
+    selectedMotion = null;
+
+    const grid = document.getElementById("motionGrid");
+    Array.from(grid.children).forEach(c => c.classList.remove("sel"));
+
+    const url = URL.createObjectURL(blob);
+    document.getElementById("liveVideo").style.display = "none";
+    document.getElementById("camPlaceholder").style.display = "none";
+    document.getElementById("camButtons").style.display = "none";
+    document.getElementById("recordButtons").style.display = "none";
+    document.getElementById("recordingButtons").style.display = "none";
+    document.getElementById("btnFlipCam").style.display = "none";
+    const previewVideo = document.getElementById("previewVideo");
+    previewVideo.classList.remove("mirrored");
+    previewVideo.src = url;
+    previewVideo.style.display = "block";
+    document.getElementById("previewButtons").style.display = "grid";
+    document.getElementById("btnSaveLibraryPersonal").style.display = "none";
+    document.getElementById("btnRetake").innerHTML = '<i class="fa-solid fa-xmark mr-1"></i>취소';
+    document.getElementById("resultCard").style.display = "none";
+
+    switchTab("analyze");
+    showToast("📁 보관함 영상을 불러왔어요. 동작을 선택하고 분석해보세요.");
   } catch (e) {
     showToast("⚠️ " + e.message);
   }
@@ -1514,7 +1682,7 @@ async function openSharedItem(item) {
     selectedMotion = item.motion_type;
     recordedBlob = blob;
     recordedMime = blob.type || (item.video_filename.endsWith(".mp4") ? "video/mp4" : "video/webm");
-    claimMode = { sharedId: item.id, videoFilename: item.video_filename, fromName: item.from_name };
+    claimMode = { source: "shared", sharedId: item.id, videoFilename: item.video_filename, fromName: item.from_name };
 
     const grid = document.getElementById("motionGrid");
     Array.from(grid.children).forEach(c => c.classList.remove("sel"));
@@ -1533,6 +1701,7 @@ async function openSharedItem(item) {
     previewVideo.src = url;
     previewVideo.style.display = "block";
     document.getElementById("previewButtons").style.display = "grid";
+    document.getElementById("btnSaveLibraryPersonal").style.display = "none";
     document.getElementById("btnRetake").innerHTML = '<i class="fa-solid fa-xmark mr-1"></i>취소';
     document.getElementById("resultCard").style.display = "none";
 
