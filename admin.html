@@ -31,6 +31,7 @@ table{width:100%;border-collapse:collapse}
 th{font-size:11.5px;text-align:left;color:var(--text-dim);padding:8px 10px;border-bottom:1.5px solid var(--line)}
 td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
 .code-tag{font-family:'Barlow Condensed';font-weight:700;font-size:15px;background:var(--navy);color:#fff;padding:2px 10px;border-radius:8px;letter-spacing:.5px}
+.chip-batch{font-size:11.5px;font-weight:700;background:var(--coral-l);color:var(--coral-d);padding:3px 10px;border-radius:12px}
 </style>
 </head>
 <body>
@@ -90,11 +91,17 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
 
     <div class="card p-4 mb-4">
       <div class="text-[14px] font-extrabold mb-3">연수생 추가</div>
-      <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2.5">
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2.5">
         <input id="newName" class="field" type="text" placeholder="이름" maxlength="20"/>
         <input id="newCode" class="field" type="text" placeholder="개인확인코드" maxlength="20"/>
+        <input id="newBatch" class="field" type="text" placeholder="그룹(예: 1기)" maxlength="20" list="batchOptions"/>
         <button id="btnRandomCode" class="btn btn-ghost px-3 text-[12.5px] font-bold whitespace-nowrap">코드 자동생성</button>
       </div>
+      <datalist id="batchOptions">
+        <option value="1기"></option>
+        <option value="2기"></option>
+        <option value="강사"></option>
+      </datalist>
       <button id="btnAdd" class="btn btn-primary w-full py-3 text-[14px] mt-3"><i class="fa-solid fa-plus mr-1.5"></i>연수생 추가</button>
       <p id="addMsg" class="text-[12px] font-bold mt-2" style="display:none"></p>
     </div>
@@ -102,9 +109,9 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
     <div class="card p-4 mb-4">
       <div class="text-[14px] font-extrabold mb-1.5">연수생 일괄 추가</div>
       <p class="text-[11.5px] mb-2.5" style="color:var(--text-dim)">
-        엑셀에서 <b>이름</b>, <b>개인확인코드</b> 두 열을 선택해서 복사한 다음 아래에 그대로 붙여넣으세요. (한 줄에 한 명씩, 쉼표로 입력해도 돼요)
+        엑셀에서 <b>이름</b>, <b>개인확인코드</b>, <b>그룹</b>(선택, 예: 1기/2기/강사) 열을 선택해서 복사한 다음 아래에 그대로 붙여넣으세요. 그룹을 안 넣으면 자동으로 "1기"가 됩니다.
       </p>
-      <textarea id="bulkInput" class="field text-[13px]" rows="6" placeholder="홍길동	1234&#10;김철수	5678&#10;이영희	9012"></textarea>
+      <textarea id="bulkInput" class="field text-[13px]" rows="6" placeholder="홍길동	1234	1기&#10;김철수	5678	1기&#10;이영희	9012	강사"></textarea>
       <button id="btnBulkAdd" class="btn btn-primary w-full py-3 text-[14px] mt-3"><i class="fa-solid fa-file-import mr-1.5"></i>일괄 추가</button>
       <div id="bulkResult" class="mt-2.5" style="display:none"></div>
     </div>
@@ -116,7 +123,7 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
       </div>
       <div class="overflow-x-auto">
         <table>
-          <thead><tr><th>이름</th><th>개인확인코드</th><th>등록일</th><th></th></tr></thead>
+          <thead><tr><th>이름</th><th>그룹</th><th>개인확인코드</th><th>등록일</th><th></th></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -229,6 +236,7 @@ document.getElementById("btnRefresh").addEventListener("click", loadList);
 async function addTrainee() {
   const name = document.getElementById("newName").value.trim();
   const code = document.getElementById("newCode").value.trim();
+  const batch = document.getElementById("newBatch").value.trim() || "1기";
   const msgEl = document.getElementById("addMsg");
   msgEl.style.display = "none";
   if (!name || !code) { msgEl.textContent = "이름과 코드를 모두 입력해주세요."; msgEl.style.color = "#DC2626"; msgEl.style.display = "block"; return; }
@@ -236,7 +244,7 @@ async function addTrainee() {
     const res = await fetch(edgeUrl + "?action=admin_create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: adminPassword, name, code })
+      body: JSON.stringify({ password: adminPassword, name, code, batch })
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "추가 실패");
@@ -264,7 +272,11 @@ function parseBulkInput(text) {
       if (line.includes("\t")) parts = line.split("\t");
       else if (line.includes(",")) parts = line.split(",");
       else parts = line.split(/\s+/);
-      return { name: (parts[0] || "").trim(), code: (parts[1] || "").trim() };
+      return {
+        name: (parts[0] || "").trim(),
+        code: (parts[1] || "").trim(),
+        batch: (parts[2] || "").trim() || "1기",
+      };
     })
     .filter(it => it.name && it.code);
 }
@@ -308,7 +320,7 @@ async function bulkAddTrainees() {
 
 async function loadList() {
   const tbody = document.getElementById("tbody");
-  tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6" style="color:var(--text-dim)">불러오는 중...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6" style="color:var(--text-dim)">불러오는 중...</td></tr>`;
   try {
     const res = await fetch(edgeUrl + "?action=admin_list", {
       method: "POST",
@@ -319,7 +331,7 @@ async function loadList() {
     if (!res.ok || data.error) throw new Error(data.error || "조회 실패");
     renderList(data.trainees || []);
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6" style="color:#DC2626">불러오기 실패: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6" style="color:#DC2626">불러오기 실패: ${e.message}</td></tr>`;
   }
 }
 
@@ -333,6 +345,7 @@ function renderList(rows) {
     const dateStr = new Date(r.created_at).toLocaleDateString("ko-KR");
     tr.innerHTML = `
       <td class="font-bold">${escHtml(r.name)}</td>
+      <td><span class="chip-batch">${escHtml(r.batch || "1기")}</span></td>
       <td><span class="code-tag">${escHtml(r.code)}</span></td>
       <td style="color:var(--text-dim)">${dateStr}</td>
       <td class="text-right"><button class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold" style="color:#B91C1C" data-id="${r.id}">삭제</button></td>
