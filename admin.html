@@ -67,11 +67,12 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
 
     <div class="card p-4 mb-4">
       <div class="flex items-center justify-between mb-3">
-        <div class="text-[14px] font-extrabold">앱 사용 설정</div>
+        <div class="text-[14px] font-extrabold">전체 마스터 스위치</div>
         <span id="statusBadge" class="text-[11.5px] font-bold px-2.5 py-1 rounded-full">-</span>
       </div>
+      <p class="text-[11.5px] mb-2.5" style="color:var(--text-dim)">이게 꺼지면 그룹/개인 설정과 상관없이 <b>전체가 무조건 차단</b>돼요. 비상정지용으로 생각하시면 돼요. 평소엔 켜두고, 아래 그룹별 설정으로 세부 운영하세요.</p>
       <label class="flex items-center gap-2 text-[13.5px] font-bold mb-3">
-        <input type="checkbox" id="cfgEnabled" class="w-4 h-4"/> 앱 사용 활성화
+        <input type="checkbox" id="cfgEnabled" class="w-4 h-4"/> 마스터 스위치 켜짐
       </label>
       <div class="grid grid-cols-2 gap-2.5 mb-2.5">
         <div>
@@ -79,14 +80,27 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
           <input id="cfgStartDate" class="field mt-1" type="date"/>
         </div>
         <div>
-          <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">사용 종료일 (이후 자동 차단)</label>
+          <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">전체 사용 종료일 (선택)</label>
           <input id="cfgActiveUntil" class="field mt-1" type="date"/>
         </div>
       </div>
-      <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">종료 시 안내 문구 (선택)</label>
+      <label class="text-[11.5px] font-bold" style="color:var(--text-dim)">차단 시 안내 문구 (선택)</label>
       <textarea id="cfgMessage" class="field mt-1" rows="2" placeholder="예: 연수가 종료되어 더 이상 이용하실 수 없어요."></textarea>
       <button id="btnSaveConfig" class="btn btn-primary w-full py-3 text-[14px] mt-3">설정 저장</button>
       <p id="cfgMsg" class="text-[12px] font-bold mt-2" style="display:none"></p>
+    </div>
+
+    <div class="card p-4 mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-[14px] font-extrabold">그룹(기수)별 사용 설정</div>
+        <button id="btnRefreshBatches" class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold"><i class="fa-solid fa-rotate mr-1"></i>새로고침</button>
+      </div>
+      <p class="text-[11.5px] mb-3" style="color:var(--text-dim)">1기/2기/강사 등 그룹마다 따로 활성화하거나 종료일을 다르게 줄 수 있어요. (마스터 스위치가 켜져 있을 때만 적용돼요)</p>
+      <div class="grid grid-cols-2 gap-2.5 mb-3">
+        <button id="btnAllBatchOn" class="btn btn-ghost py-2.5 text-[12.5px] font-bold" style="color:var(--teal)">전체 그룹 활성화</button>
+        <button id="btnAllBatchOff" class="btn btn-ghost py-2.5 text-[12.5px] font-bold" style="color:#B91C1C">전체 그룹 비활성화</button>
+      </div>
+      <div id="batchList" class="space-y-2.5"></div>
     </div>
 
     <div class="card p-4 mb-4">
@@ -123,7 +137,7 @@ td{font-size:13.5px;padding:9px 10px;border-bottom:1px solid var(--line)}
       </div>
       <div class="overflow-x-auto">
         <table>
-          <thead><tr><th>이름</th><th>그룹</th><th>개인확인코드</th><th>등록일</th><th></th></tr></thead>
+          <thead><tr><th>이름</th><th>그룹</th><th>개인확인코드</th><th>등록일</th><th>개인 설정</th><th></th></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -164,8 +178,92 @@ async function doGateLogin() {
     document.getElementById("panel").style.display = "block";
     loadList();
     loadConfig();
+    loadBatches();
   } catch {
     errEl.style.display = "block";
+  }
+}
+
+document.getElementById("btnRefreshBatches").addEventListener("click", loadBatches);
+document.getElementById("btnAllBatchOn").addEventListener("click", () => bulkSetBatches(true));
+document.getElementById("btnAllBatchOff").addEventListener("click", () => bulkSetBatches(false));
+
+async function loadBatches() {
+  const listEl = document.getElementById("batchList");
+  listEl.innerHTML = `<p class="text-[12.5px] text-center py-4" style="color:var(--text-dim)">불러오는 중...</p>`;
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_list_batches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "조회 실패");
+    renderBatchList(data.batches || []);
+  } catch (e) {
+    listEl.innerHTML = `<p class="text-[12.5px] text-center py-4" style="color:#DC2626">불러오기 실패: ${e.message}</p>`;
+  }
+}
+
+function renderBatchList(batches) {
+  const listEl = document.getElementById("batchList");
+  listEl.innerHTML = "";
+  batches.forEach(b => {
+    const row = document.createElement("div");
+    row.className = "card p-3";
+    row.style.background = "#F8F9FB";
+    row.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <span class="chip-batch" style="font-size:13px">${escHtml(b.batch)}</span>
+        <label class="flex items-center gap-1.5 text-[12.5px] font-bold">
+          <input type="checkbox" class="w-4 h-4" data-role="enabled" ${b.enabled ? "checked" : ""}/> 활성화
+        </label>
+      </div>
+      <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
+        <div>
+          <label class="text-[10.5px] font-bold" style="color:var(--text-dim)">종료일 (선택)</label>
+          <input type="date" class="field mt-1" style="padding:6px 8px;font-size:12.5px" data-role="until" value="${b.active_until || ""}"/>
+        </div>
+        <button class="btn btn-ghost px-3 py-2 text-[12px] font-bold" data-role="save">저장</button>
+      </div>
+    `;
+    row.querySelector('[data-role="save"]').addEventListener("click", () => {
+      const enabled = row.querySelector('[data-role="enabled"]').checked;
+      const until = row.querySelector('[data-role="until"]').value;
+      saveBatchConfig(b.batch, enabled, until);
+    });
+    listEl.appendChild(row);
+  });
+}
+
+async function saveBatchConfig(batch, enabled, active_until) {
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_update_batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, batch, enabled, active_until })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "저장 실패");
+  } catch (e) {
+    alert("저장 실패: " + e.message);
+  }
+}
+
+async function bulkSetBatches(enabled) {
+  const label = enabled ? "전체 그룹을 활성화" : "전체 그룹을 비활성화";
+  if (!confirm(`${label}할까요? 모든 그룹에 한번에 적용돼요.`)) return;
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_bulk_set_batches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, enabled })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "일괄 변경 실패");
+    loadBatches();
+  } catch (e) {
+    alert("일괄 변경 실패: " + e.message);
   }
 }
 
@@ -320,7 +418,7 @@ async function bulkAddTrainees() {
 
 async function loadList() {
   const tbody = document.getElementById("tbody");
-  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6" style="color:var(--text-dim)">불러오는 중...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6" style="color:var(--text-dim)">불러오는 중...</td></tr>`;
   try {
     const res = await fetch(edgeUrl + "?action=admin_list", {
       method: "POST",
@@ -331,7 +429,7 @@ async function loadList() {
     if (!res.ok || data.error) throw new Error(data.error || "조회 실패");
     renderList(data.trainees || []);
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6" style="color:#DC2626">불러오기 실패: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6" style="color:#DC2626">불러오기 실패: ${e.message}</td></tr>`;
   }
 }
 
@@ -343,16 +441,44 @@ function renderList(rows) {
   rows.forEach(r => {
     const tr = document.createElement("tr");
     const dateStr = new Date(r.created_at).toLocaleDateString("ko-KR");
+    const ov = r.enabled_override;
+    const ovVal = ov === true ? "true" : ov === false ? "false" : "auto";
     tr.innerHTML = `
       <td class="font-bold">${escHtml(r.name)}</td>
       <td><span class="chip-batch">${escHtml(r.batch || "1기")}</span></td>
       <td><span class="code-tag">${escHtml(r.code)}</span></td>
       <td style="color:var(--text-dim)">${dateStr}</td>
+      <td>
+        <select class="field" style="padding:6px 8px;font-size:12px" data-role="override">
+          <option value="auto" ${ovVal === "auto" ? "selected" : ""}>그룹 설정 따름</option>
+          <option value="true" ${ovVal === "true" ? "selected" : ""}>강제 활성</option>
+          <option value="false" ${ovVal === "false" ? "selected" : ""}>강제 비활성</option>
+        </select>
+      </td>
       <td class="text-right"><button class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold" style="color:#B91C1C" data-id="${r.id}">삭제</button></td>
     `;
-    tr.querySelector("button").addEventListener("click", () => deleteTrainee(r.id, r.name));
+    tr.querySelector('[data-role="override"]').addEventListener("change", (e) => {
+      const v = e.target.value;
+      setTraineeOverride(r.id, v === "auto" ? null : v === "true");
+    });
+    tr.querySelector('button[data-id]').addEventListener("click", () => deleteTrainee(r.id, r.name));
     tbody.appendChild(tr);
   });
+}
+
+async function setTraineeOverride(traineeId, val) {
+  try {
+    const res = await fetch(edgeUrl + "?action=admin_set_trainee_override", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: adminPassword, trainee_id: traineeId, enabled_override: val })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "저장 실패");
+  } catch (e) {
+    alert("저장 실패: " + e.message);
+    loadList();
+  }
 }
 
 async function deleteTrainee(id, name) {
