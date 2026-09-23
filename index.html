@@ -261,9 +261,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
   <!-- ===== TAB 3: 받은 영상 ===== -->
   <section id="tabShared" style="display:none">
-    <div class="flex items-center justify-between mb-3.5 mt-1">
-      <div class="disp text-[20px] font-extrabold">받은 영상</div>
+    <div class="flex items-center justify-between mb-3 mt-1">
+      <div class="disp text-[20px] font-extrabold">영상함</div>
       <button id="btnRefreshShared" class="btn btn-ghost px-3 py-1.5 text-[12px] font-bold"><i class="fa-solid fa-rotate mr-1"></i>새로고침</button>
+    </div>
+    <div class="flex gap-2 mb-3.5">
+      <button id="chipReceived" class="btn day-chip sel">받은 영상</button>
+      <button id="chipSent" class="btn day-chip">보낸 영상</button>
     </div>
     <div id="sharedEmpty" class="card p-8 text-center" style="display:none">
       <i class="fa-solid fa-inbox text-3xl mb-2.5" style="color:var(--line)"></i>
@@ -369,6 +373,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
+<div id="uploadProgressBox" style="display:none;position:fixed;left:14px;right:14px;bottom:96px;max-width:520px;margin:0 auto;background:var(--navy);color:#fff;border-radius:14px;padding:12px 16px;z-index:85;box-shadow:0 8px 24px rgba(20,33,61,.35)">
+  <div class="flex items-center justify-between mb-1.5">
+    <span class="text-[12.5px] font-bold" id="uploadProgressLabel">업로드 중...</span>
+    <span class="text-[12.5px] font-bold" id="uploadProgressPercent">0%</span>
+  </div>
+  <div style="background:rgba(255,255,255,.2);border-radius:6px;height:6px;overflow:hidden">
+    <div id="uploadProgressBar" style="background:var(--coral);height:100%;width:0%;transition:width .15s"></div>
+  </div>
+</div>
+
 <div id="toast" class="toast-corner"></div>
 
 <script>
@@ -425,6 +439,7 @@ let sharePickerCallback = null;
 let capBusy = false;
 let saveLibState = null; // { mode: 'new'|'edit', purpose, pendingBlob, pendingMime, afterSave, libraryId }
 let currentLibraryPurpose = "send";
+let sharedViewMode = "received"; // 'received' | 'sent'
 let allTrainees = [];
 let sharedItems = [];
 let shareBatchFilter = "all";
@@ -498,7 +513,11 @@ function bindEvents() {
   document.getElementById("btnCloseImgModal").addEventListener("click", () => document.getElementById("imgModalBg").style.display = "none");
   document.getElementById("btnCloseShare").addEventListener("click", () => document.getElementById("shareSheetBg").style.display = "none");
   document.getElementById("shareSearch").addEventListener("input", renderShareList);
-  document.getElementById("btnRefreshShared").addEventListener("click", loadSharedInbox);
+  document.getElementById("btnRefreshShared").addEventListener("click", () => {
+    if (sharedViewMode === "sent") loadSentList(); else loadSharedInbox();
+  });
+  document.getElementById("chipReceived").addEventListener("click", () => switchSharedView("received"));
+  document.getElementById("chipSent").addEventListener("click", () => switchSharedView("sent"));
 
   /* --- 영상 촬영 탭 --- */
   document.getElementById("capBtnCamOn").addEventListener("click", startCameraCap);
@@ -587,7 +606,7 @@ function switchTab(tab) {
   document.getElementById("navHistory").classList.toggle("active", tab === "history");
   document.getElementById("navShared").classList.toggle("active", tab === "shared");
   if (tab === "history") loadHistory();
-  if (tab === "shared") loadSharedInbox();
+  if (tab === "shared") { if (sharedViewMode === "sent") loadSentList(); else loadSharedInbox(); }
 }
 
 /* ===================== 로그인 ===================== */
@@ -1040,7 +1059,7 @@ async function autoSaveToLibraryCap() {
   setCapBusyUI(true);
   showToast("⏳ 보관함에 자동 저장 중...");
   try {
-    const filename = await uploadVideoToNas(capRecordedBlob, capRecordedMime, capSelectedMotion);
+    const filename = await uploadVideoToNas(capRecordedBlob, capRecordedMime, capSelectedMotion, "보관함에 자동 저장 중...");
     const res = await fetch(EDGE_URL + "?action=save_to_library", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1344,21 +1363,46 @@ function renderShareList() {
 }
 
 /* ===================== 영상 업로드 + 전송 공통 헬퍼 ===================== */
-async function uploadVideoToNas(blob, mimeType, motionType) {
+function showUploadProgress(label) {
+  document.getElementById("uploadProgressLabel").textContent = label || "업로드 중...";
+  document.getElementById("uploadProgressPercent").textContent = "0%";
+  document.getElementById("uploadProgressBar").style.width = "0%";
+  document.getElementById("uploadProgressBox").style.display = "block";
+}
+function updateUploadProgress(pct) {
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  document.getElementById("uploadProgressPercent").textContent = p + "%";
+  document.getElementById("uploadProgressBar").style.width = p + "%";
+}
+function hideUploadProgress() {
+  document.getElementById("uploadProgressBox").style.display = "none";
+}
+
+function uploadVideoToNas(blob, mimeType, motionType, label) {
   const ext = (mimeType || "").includes("mp4") ? "mp4" : "webm";
-  const filename = `${motionType}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const upRes = await fetch(EDGE_URL + "?action=upload&filename=" + encodeURIComponent(filename), {
-    method: "POST",
-    headers: { "x-video-type": mimeType || "video/webm" },
-    body: blob
+  const filename = `${motionType || "video"}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  showUploadProgress(label || "영상 업로드 중...");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", EDGE_URL + "?action=upload&filename=" + encodeURIComponent(filename));
+    xhr.setRequestHeader("x-video-type", mimeType || "video/webm");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) updateUploadProgress((e.loaded / e.total) * 100);
+    };
+    xhr.onload = () => {
+      hideUploadProgress();
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch (e) { /* ignore */ }
+      if (xhr.status >= 200 && xhr.status < 300 && !data.error) resolve(filename);
+      else reject(new Error(data.error || "업로드 실패"));
+    };
+    xhr.onerror = () => { hideUploadProgress(); reject(new Error("네트워크 오류로 업로드에 실패했어요.")); };
+    xhr.send(blob);
   });
-  const upData = await upRes.json();
-  if (!upRes.ok || upData.error) throw new Error(upData.error || "업로드 실패");
-  return filename;
 }
 
 async function sendVideoToTrainee(traineeId, blob, mimeType, motionType) {
-  const filename = await uploadVideoToNas(blob, mimeType, motionType);
+  const filename = await uploadVideoToNas(blob, mimeType, motionType, "전송할 영상 업로드 중...");
   const shRes = await fetch(EDGE_URL + "?action=share_video", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1422,8 +1466,7 @@ async function confirmSaveToLibrary() {
       showToast("✅ 수정했어요");
       openLibraryList(currentLibraryPurpose);
     } else {
-      showToast("⏳ 보관함에 저장 중...");
-      const filename = await uploadVideoToNas(state.pendingBlob, state.pendingMime, null);
+      const filename = await uploadVideoToNas(state.pendingBlob, state.pendingMime, null, "보관함에 저장할 영상 업로드 중...");
       const res = await fetch(EDGE_URL + "?action=save_to_library", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1599,6 +1642,75 @@ async function openLibraryItemForAnalysis(item) {
 }
 
 /* ===================== 받은 영상함 ===================== */
+function switchSharedView(mode) {
+  sharedViewMode = mode;
+  document.getElementById("chipReceived").classList.toggle("sel", mode === "received");
+  document.getElementById("chipSent").classList.toggle("sel", mode === "sent");
+  document.getElementById("sharedEmpty").querySelector("p").textContent =
+    mode === "sent" ? "아직 보낸 영상이 없어요." : "아직 받은 영상이 없어요.";
+  if (mode === "sent") loadSentList(); else loadSharedInbox();
+}
+
+async function loadSentList() {
+  if (!session) return;
+  const listEl = document.getElementById("sharedList");
+  listEl.innerHTML = `<div class="flex justify-center py-8"><div class="spinner"></div></div>`;
+  try {
+    const res = await fetch(EDGE_URL + "?action=list_sent&from_id=" + session.id);
+    const data = await res.json();
+    renderSentList(data.items || []);
+  } catch (e) {
+    renderSentList([]);
+  }
+}
+
+function renderSentList(items) {
+  const listEl = document.getElementById("sharedList");
+  document.getElementById("sharedEmpty").style.display = items.length === 0 ? "block" : "none";
+  listEl.innerHTML = "";
+  items.forEach(it => {
+    const m = it.motion_type ? (MOTION_MAP[it.motion_type] || { label: it.motion_type, em: "🏐" }) : null;
+    const dateStr = new Date(it.created_at).toLocaleString("ko-KR");
+    const canRecall = it.status === "pending" && !it.viewed_at;
+    let statusHtml;
+    if (it.status === "claimed") statusHtml = `<span class="chip" style="background:var(--teal-l);color:var(--teal)">분석 완료됨</span>`;
+    else if (it.viewed_at) statusHtml = `<span class="chip" style="background:var(--line);color:var(--text-dim)">상대방이 확인함</span>`;
+    else statusHtml = `<span class="chip" style="background:var(--amber-l);color:#B45309">확인 전</span>`;
+
+    const card = document.createElement("div");
+    card.className = "card p-4";
+    card.innerHTML = `
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="min-w-0">
+          <div class="text-[13.5px] font-extrabold truncate">${escHtml(it.to_name)}님에게 보냄</div>
+          <div class="text-[12px]" style="color:var(--text-dim)">${m ? m.em + " " + escHtml(m.label) : "동작 미지정"} · ${dateStr}</div>
+        </div>
+        ${statusHtml}
+      </div>
+      ${canRecall ? `<button class="btn btn-ghost w-full py-2 text-[12.5px] font-bold" style="color:#B91C1C" data-role="recall"><i class="fa-solid fa-rotate-left mr-1"></i>회수하기</button>` : ""}
+    `;
+    const recallBtn = card.querySelector('[data-role="recall"]');
+    if (recallBtn) recallBtn.addEventListener("click", () => recallSharedItem(it.id));
+    listEl.appendChild(card);
+  });
+}
+
+async function recallSharedItem(sharedId) {
+  if (!confirm("이 영상을 회수할까요? 회수하면 내 보관함으로 옮겨져요.")) return;
+  showToast("⏳ 회수 중...");
+  try {
+    const res = await fetch(EDGE_URL + "?action=recall_shared", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shared_id: sharedId })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "회수 실패");
+    showToast("✅ 회수했어요. 보관함에서 확인하세요");
+    loadSentList();
+  } catch (e) {
+    showToast("⚠️ " + e.message);
+  }
+}
+
 async function loadSharedInbox() {
   if (!session) return;
   try {
